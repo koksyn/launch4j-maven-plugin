@@ -27,7 +27,6 @@ import java.util.List;
 import java.util.Set;
 
 public class ClassPath {
-
     /**
      * The main class to run. This is not required if you are wrapping an executable jar.
      */
@@ -70,33 +69,67 @@ public class ClassPath {
     @Parameter
     String postCp;
 
-    private void addToCp(List<String> cp, String cpStr) {
-        cp.addAll(Arrays.asList(cpStr.split("\\s*;\\s*")));
+    public ClassPath() {
+    }
+
+    ClassPath(String mainClass, boolean addDependencies,
+              String jarLocation, String preCp, String postCp) {
+        this.mainClass = mainClass;
+        this.addDependencies = addDependencies;
+        this.jarLocation = jarLocation;
+        this.preCp = preCp;
+        this.postCp = postCp;
     }
 
     net.sf.launch4j.config.ClassPath toL4j(Set<Artifact> dependencies) {
         net.sf.launch4j.config.ClassPath ret = new net.sf.launch4j.config.ClassPath();
+
         ret.setMainClass(mainClass);
+        List<String> paths = generatePathsFrom(dependencies);
+        ret.setPaths(paths);
 
-        List<String> cp = new ArrayList<>();
-        if (preCp != null) addToCp(cp, preCp);
+        return ret;
+    }
 
-        if (addDependencies) {
-            if (jarLocation == null) jarLocation = "";
-            else if (!jarLocation.endsWith("/")) jarLocation += "/";
+    private List<String> generatePathsFrom(Set<Artifact> dependencies) {
+        List<String> paths = new ArrayList<>();
+
+        if (preCp != null) {
+            addToPaths(paths, preCp);
+        }
+
+        if (addDependencies && dependencies != null) {
+            fillJarLocation();
 
             for (Artifact dependency : dependencies) {
-                    String depFilename;
-                    depFilename = dependency.getFile().getName();
-//                  System.out.println("dependency = " + depFilename);
-                    cp.add(jarLocation + depFilename);
+                String dependencyFilename = dependency.getFile()
+                        .getName();
+                paths.add(jarLocation + dependencyFilename);
             }
         }
 
-        if (postCp != null) addToCp(cp, postCp);
-        ret.setPaths(cp);
+        if (postCp != null) {
+            addToPaths(paths, postCp);
+        }
 
-        return ret;
+        return paths;
+    }
+
+    private void fillJarLocation() {
+        if (jarLocation == null) {
+            jarLocation = "";
+        }
+        else if (!jarLocation.endsWith("/")) {
+            jarLocation += "/";
+        }
+    }
+
+    private void addToPaths(List<String> paths, String rawPath) {
+        paths.addAll(
+                Arrays.asList(
+                        rawPath.split("\\s*;\\s*")
+                )
+        );
     }
 
     @Override
@@ -109,5 +142,4 @@ public class ClassPath {
                 ", postCp='" + postCp + '\'' +
                 '}';
     }
-
 }
