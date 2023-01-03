@@ -453,9 +453,7 @@ public class Launch4jMojo extends AbstractMojo {
                 c.setVersionInfo(versionInfo.toL4j());
             }
             if (messages != null) {
-                if (messages.bundledJreErr != null) {
-                    getLog().warn("<bundledJreErr/> is deprecated, use <jreNotFoundErr/> instead!");
-                }
+                messages.deprecationWarning(getLog());
                 c.setMessages(messages.toL4j());
             }
             ConfigPersister.getInstance().setAntConfig(c, getBaseDir());

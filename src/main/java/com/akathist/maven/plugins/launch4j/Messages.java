@@ -19,6 +19,7 @@
 package com.akathist.maven.plugins.launch4j;
 
 import net.sf.launch4j.config.Msg;
+import org.apache.maven.plugin.logging.Log;
 import org.apache.maven.plugins.annotations.Parameter;
 
 /**
@@ -50,7 +51,6 @@ public class Messages {
     Messages(String startupErr, String jreVersionErr,
                     String launcherErr, String instanceAlreadyExistsMsg, String jreNotFoundErr) {
         this.startupErr = startupErr;
-        this.bundledJreErr = bundledJreErr;
         this.jreVersionErr = jreVersionErr;
         this.launcherErr = launcherErr;
         this.instanceAlreadyExistsMsg = instanceAlreadyExistsMsg;
@@ -79,5 +79,11 @@ public class Messages {
                 ", instanceAlreadyExistsMsg='" + instanceAlreadyExistsMsg + '\'' +
                 ", jreNotFoundErr='" + jreNotFoundErr + '\'' +
                 '}';
+    }
+
+    public void deprecationWarning(Log log) {
+        if (this.bundledJreErr != null) {
+            log.warn("<bundledJreErr/> is deprecated, use <jreNotFoundErr/> instead!");
+        }
     }
 }

@@ -1,12 +1,20 @@
 package com.akathist.maven.plugins.launch4j;
 
 import net.sf.launch4j.config.Msg;
+import org.apache.maven.plugin.logging.Log;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Mock;
+import org.mockito.junit.MockitoJUnitRunner;
 
 import static com.akathist.maven.plugins.launch4j.utils.ToStringVerifier.containsParam;
 import static org.junit.Assert.*;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.*;
 
+@RunWith(MockitoJUnitRunner.class)
 public class MessagesTest {
     // Params
     private final String STARTUP_ERR = "ANY_MESSAGE";
@@ -14,6 +22,10 @@ public class MessagesTest {
     private final String LAUNCHER_ERR = "ANY_ERROR";
     private final String INSTANCE_ALREADY_EXISTS_MSG = "Instance already exists.";
     private final String JRE_NOT_FOUND_ERR = "JRE was not found.";
+
+    // Mocks
+    @Mock
+    Log log;
 
     // Subject
     private Messages messages;
@@ -51,5 +63,31 @@ public class MessagesTest {
         assertTrue(containsParam(result, "launcherErr", LAUNCHER_ERR));
         assertTrue(containsParam(result, "instanceAlreadyExistsMsg", INSTANCE_ALREADY_EXISTS_MSG));
         assertTrue(containsParam(result, "jreNotFoundErr", JRE_NOT_FOUND_ERR));
+    }
+
+    @Test
+    public void shouldWarnAboutDeprecatedProperties_WhenTheyWere_Filled() {
+        // given
+        messages.bundledJreErr = "Bundled JRE error message";
+        ArgumentCaptor<String> messageCaptor = ArgumentCaptor.forClass(String.class);
+
+        // when
+        messages.deprecationWarning(log);
+
+        // then
+        verify(log).warn(messageCaptor.capture());
+        assertTrue(messageCaptor.getValue().contains("bundledJreErr"));
+    }
+
+    @Test
+    public void should_Not_WarnAboutDeprecatedProperties_WhenTheyWere_Not_Filled() {
+        // given
+        messages.bundledJreErr = null;
+
+        // when
+        messages.deprecationWarning(log);
+
+        // then
+        verify(log, never()).warn(anyString());
     }
 }
