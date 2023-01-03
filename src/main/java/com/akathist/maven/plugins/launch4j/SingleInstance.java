@@ -24,12 +24,19 @@ import org.apache.maven.plugins.annotations.Parameter;
  * Details about running your application as a single instance.
  */
 public class SingleInstance {
-
     @Parameter
     String mutexName;
 
     @Parameter
     String windowTitle;
+
+    public SingleInstance() {
+    }
+
+    public SingleInstance(String mutexName, String windowTitle) {
+        this.mutexName = mutexName;
+        this.windowTitle = windowTitle;
+    }
 
     net.sf.launch4j.config.SingleInstance toL4j() {
         net.sf.launch4j.config.SingleInstance ret = new net.sf.launch4j.config.SingleInstance();
@@ -40,4 +47,11 @@ public class SingleInstance {
         return ret;
     }
 
+    @Override
+    public String toString() {
+        return "SingleInstance{" +
+                "mutexName='" + mutexName + '\'' +
+                ", windowTitle='" + windowTitle + '\'' +
+                '}';
+    }
 }
