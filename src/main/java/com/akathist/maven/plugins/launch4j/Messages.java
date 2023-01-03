@@ -25,7 +25,6 @@ import org.apache.maven.plugins.annotations.Parameter;
  * Details about messages you can pass.
  */
 public class Messages {
-
     @Parameter
     String startupErr;
 
@@ -44,6 +43,19 @@ public class Messages {
 
     @Parameter
     String jreNotFoundErr;
+
+    public Messages() {
+    }
+
+    public Messages(String startupErr, String bundledJreErr, String jreVersionErr,
+                    String launcherErr, String instanceAlreadyExistsMsg, String jreNotFoundErr) {
+        this.startupErr = startupErr;
+        this.bundledJreErr = bundledJreErr;
+        this.jreVersionErr = jreVersionErr;
+        this.launcherErr = launcherErr;
+        this.instanceAlreadyExistsMsg = instanceAlreadyExistsMsg;
+        this.jreNotFoundErr = jreNotFoundErr;
+    }
 
     Msg toL4j() {
         Msg ret = new Msg();
