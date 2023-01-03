@@ -392,7 +392,7 @@ public class Launch4jMojo extends AbstractMojo {
 
         // state log
         if (getLog().isDebugEnabled()) {
-            printState(configPersister);
+            printState(configPersister.getConfig());
         }
 
         // executable build
@@ -715,9 +715,8 @@ public class Launch4jMojo extends AbstractMojo {
     /**
      * Just prints out how we were configured.
      */
-    private void printState(ConfigPersister configPersister) {
+    private void printState(Config c) {
         Log log = getLog();
-        Config c = configPersister.getConfig();
 
         log.debug("headerType = " + c.getHeaderType());
         log.debug("outfile = " + c.getOutfile());
