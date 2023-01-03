@@ -11,6 +11,7 @@ import org.mockito.junit.MockitoJUnitRunner;
 
 import java.io.File;
 
+import static com.akathist.maven.plugins.launch4j.utils.ToStringVerifier.containsParam;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.doReturn;
 
@@ -351,9 +352,5 @@ public class VersionInfoTest {
         assertTrue(containsParam(result, "originalFilename", originalFilename));
         assertTrue(containsParam(result, "language", language));
         assertTrue(containsParam(result, "trademarks", trademarks));
-    }
-
-    private boolean containsParam(String result, String paramName, String paramValue) {
-        return result.contains(paramName + "='" + paramValue + "'");
     }
 }
