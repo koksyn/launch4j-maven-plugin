@@ -390,18 +390,17 @@ public class Launch4jMojo extends AbstractMojo {
         }
         configPersister.setAntConfig(config, configBaseDir);
 
-        // state log
+        // state log debug
         if (getLog().isDebugEnabled()) {
             printState(configPersister.getConfig());
         }
 
         // executable build
-        final Builder builder = new Builder(new MavenLog(getLog()), workDir);
+        ExecutableBuilder executableBuilder = new ExecutableBuilder(getLog());
         try {
-            builder.build();
-        } catch (BuilderException e) {
-            getLog().error(e);
-            throw new MojoExecutionException("Failed to build the executable; please verify your configuration.", e);
+            executableBuilder.build(workDir);
+        } catch (RuntimeException exception) {
+            throw new MojoExecutionException("Failed to build the executable", exception);
         }
 
         // save config to XML
