@@ -23,7 +23,6 @@ import java.io.*;
 import org.apache.maven.plugins.annotations.Parameter;
 
 public class Splash {
-
     /**
      * The path (relative to the executable when distributed) to the splash page image.
      */
@@ -51,6 +50,16 @@ public class Splash {
     @Parameter(defaultValue = "true")
     boolean timeoutErr;
 
+    public Splash() {
+    }
+
+    public Splash(File file, boolean waitForWindow, int timeout, boolean timeoutErr) {
+        this.file = file;
+        this.waitForWindow = waitForWindow;
+        this.timeout = timeout;
+        this.timeoutErr = timeoutErr;
+    }
+
     net.sf.launch4j.config.Splash toL4j() {
         net.sf.launch4j.config.Splash ret = new net.sf.launch4j.config.Splash();
 
@@ -65,10 +74,9 @@ public class Splash {
     @Override
     public String toString() {
         return "Splash{" +
-                "file=" + file +
-                ", waitForWindow=" + waitForWindow +
-                ", timeout=" + timeout +
-                ", timeoutErr=" + timeoutErr +
-                '}';
+                "file='" + file + "\'" +
+                ", waitForWindow='" + waitForWindow + "\'" +
+                ", timeout='" + timeout + "\'" +
+                ", timeoutErr='" + timeoutErr + "\'}";
     }
 }
