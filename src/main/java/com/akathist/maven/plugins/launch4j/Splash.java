@@ -53,7 +53,7 @@ public class Splash {
     public Splash() {
     }
 
-    public Splash(File file, boolean waitForWindow, int timeout, boolean timeoutErr) {
+    Splash(File file, boolean waitForWindow, int timeout, boolean timeoutErr) {
         this.file = file;
         this.waitForWindow = waitForWindow;
         this.timeout = timeout;

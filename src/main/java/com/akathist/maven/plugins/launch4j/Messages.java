@@ -47,7 +47,7 @@ public class Messages {
     public Messages() {
     }
 
-    public Messages(String startupErr, String bundledJreErr, String jreVersionErr,
+    Messages(String startupErr, String jreVersionErr,
                     String launcherErr, String instanceAlreadyExistsMsg, String jreNotFoundErr) {
         this.startupErr = startupErr;
         this.bundledJreErr = bundledJreErr;

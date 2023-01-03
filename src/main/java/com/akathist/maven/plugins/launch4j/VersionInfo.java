@@ -118,7 +118,7 @@ public class VersionInfo {
     public VersionInfo() {
     }
 
-    public VersionInfo(String fileVersion, String txtFileVersion, String fileDescription,
+    VersionInfo(String fileVersion, String txtFileVersion, String fileDescription,
                        String copyright, String productVersion, String txtProductVersion,
                        String productName, String companyName, String internalName,
                        String originalFilename, String language, String trademarks) {

@@ -33,7 +33,7 @@ public class SingleInstance {
     public SingleInstance() {
     }
 
-    public SingleInstance(String mutexName, String windowTitle) {
+    SingleInstance(String mutexName, String windowTitle) {
         this.mutexName = mutexName;
         this.windowTitle = windowTitle;
     }

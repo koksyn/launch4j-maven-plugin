@@ -20,8 +20,7 @@ public class MessagesTest {
 
     @Before
     public void buildFromTestParams() {
-        messages = new Messages(STARTUP_ERR, null,
-                JRE_VERSION_ERR, LAUNCHER_ERR,
+        messages = new Messages(STARTUP_ERR, JRE_VERSION_ERR, LAUNCHER_ERR,
                 INSTANCE_ALREADY_EXISTS_MSG, JRE_NOT_FOUND_ERR
         );
     }
