@@ -55,6 +55,7 @@ public class VersionInfoTest {
         net.sf.launch4j.config.VersionInfo l4jVersionInfo = versionInfo.toL4j();
 
         // then
+        assertNotNull(l4jVersionInfo);
         assertEquals(versionInfo.fileVersion, l4jVersionInfo.getFileVersion());
         assertEquals(versionInfo.txtFileVersion, l4jVersionInfo.getTxtFileVersion());
         assertEquals(versionInfo.fileDescription, l4jVersionInfo.getFileDescription());
