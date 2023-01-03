@@ -15,20 +15,20 @@ import static org.mockito.Mockito.doReturn;
 @RunWith(MockitoJUnitRunner.class)
 public class SplashTest {
     // Splash test params
-    private boolean waitForWindow = true;
-    private int timeout = 60;
-    private boolean timeoutErr = true;
+    private final boolean WAIT_FOR_WINDOW = true;
+    private final int TIMEOUT = 60;
+    private final boolean TIMEOUT_ERR = true;
 
     // Mocks
     @Mock
-    File file;
+    private File file;
 
     // Subject
     private Splash splash;
 
     @Before
     public void buildFromTestParams() {
-        splash = new Splash(file, waitForWindow, timeout, timeoutErr);
+        splash = new Splash(file, WAIT_FOR_WINDOW, TIMEOUT, TIMEOUT_ERR);
     }
 
     @Test
@@ -38,10 +38,10 @@ public class SplashTest {
 
         // then
         assertNotNull(l4jSplash);
-        assertEquals(splash.file, l4jSplash.getFile());
-        assertEquals(splash.waitForWindow, l4jSplash.getWaitForWindow());
-        assertEquals(splash.timeout, l4jSplash.getTimeout());
-        assertEquals(splash.timeoutErr, l4jSplash.isTimeoutErr());
+        assertEquals(file, l4jSplash.getFile());
+        assertEquals(WAIT_FOR_WINDOW, l4jSplash.getWaitForWindow());
+        assertEquals(TIMEOUT, l4jSplash.getTimeout());
+        assertEquals(TIMEOUT_ERR, l4jSplash.isTimeoutErr());
     }
 
     @Test
@@ -56,8 +56,8 @@ public class SplashTest {
         // then
         assertNotNull(result);
         assertTrue(containsParam(result, "file", filePath));
-        assertTrue(containsParam(result, "waitForWindow", String.valueOf(waitForWindow)));
-        assertTrue(containsParam(result, "timeout", String.valueOf(timeout)));
-        assertTrue(containsParam(result, "timeoutErr", String.valueOf(timeoutErr)));
+        assertTrue(containsParam(result, "waitForWindow", String.valueOf(WAIT_FOR_WINDOW)));
+        assertTrue(containsParam(result, "timeout", String.valueOf(TIMEOUT)));
+        assertTrue(containsParam(result, "timeoutErr", String.valueOf(TIMEOUT_ERR)));
     }
 }

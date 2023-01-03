@@ -18,18 +18,18 @@ import static org.mockito.Mockito.doReturn;
 @RunWith(MockitoJUnitRunner.class)
 public class VersionInfoTest {
     // VersionInfo test params
-    private String fileVersion = "1.0.0.0";
-    private String txtFileVersion = "1.0.0.0";
-    private String fileDescription = "Launch4j Test Application";
-    private String copyright = "Copyright Orphan OSS";
-    private String productVersion = "1.0.0.0";
-    private String txtProductVersion = "1.0.0.0";
-    private String productName = "Test App";
-    private String companyName = "Orphan OSS Company";
-    private String internalName = "app";
-    private String originalFilename = "app.exe";
-    private String language = LanguageID.ENGLISH_US.name();
-    private String trademarks = "Test ™";
+    private final String FILE_VERSION = "1.0.0.0";
+    private final String TXT_FILE_VERSION = "1.0.0.0";
+    private final String FILE_DESCRIPTION = "Launch4j Test Application";
+    private final String COPYRIGHT = "Copyright Orphan OSS";
+    private final String PRODUCT_VERSION = "1.0.0.0";
+    private final String TXT_PRODUCT_VERSION = "1.0.0.0";
+    private final String PRODUCT_NAME = "Test App";
+    private final String COMPANY_NAME = "Orphan OSS Company";
+    private final String INTERNAL_NAME = "app";
+    private final String ORIGINAL_FILENAME = "app.exe";
+    private final String LANGUAGE = LanguageID.ENGLISH_US.name();
+    private final String TRADEMARKS = "Test ™";
 
     // Mocks
     @Mock
@@ -44,10 +44,10 @@ public class VersionInfoTest {
 
     @Before
     public void buildVersionInfoFromTestParams() {
-        versionInfo = new VersionInfo(fileVersion, txtFileVersion, fileDescription,
-                copyright, productVersion, txtProductVersion,
-                productName, companyName, internalName,
-                originalFilename, language, trademarks);
+        versionInfo = new VersionInfo(FILE_VERSION, TXT_FILE_VERSION, FILE_DESCRIPTION,
+                COPYRIGHT, PRODUCT_VERSION, TXT_PRODUCT_VERSION,
+                PRODUCT_NAME, COMPANY_NAME, INTERNAL_NAME,
+                ORIGINAL_FILENAME, LANGUAGE, TRADEMARKS);
     }
 
     @Test
@@ -108,9 +108,9 @@ public class VersionInfoTest {
 
         // then
         assertNotEquals(projectVersion, versionInfo.fileVersion);
-        assertEquals(fileVersion, versionInfo.fileVersion);
+        assertEquals(FILE_VERSION, versionInfo.fileVersion);
         assertNotEquals(projectVersion, versionInfo.productVersion);
-        assertEquals(productVersion, versionInfo.productVersion);
+        assertEquals(PRODUCT_VERSION, versionInfo.productVersion);
     }
 
     @Test
@@ -127,9 +127,9 @@ public class VersionInfoTest {
 
         // then
         assertEquals(projectVersion, versionInfo.fileVersion);
-        assertNotEquals(fileVersion, versionInfo.fileVersion);
+        assertNotEquals(FILE_VERSION, versionInfo.fileVersion);
         assertEquals(projectVersion, versionInfo.productVersion);
-        assertNotEquals(productVersion, versionInfo.productVersion);
+        assertNotEquals(PRODUCT_VERSION, versionInfo.productVersion);
     }
 
     @Test
@@ -147,7 +147,7 @@ public class VersionInfoTest {
 
         // then
         assertNotNull(versionInfo.copyright);
-        assertEquals(copyright, versionInfo.copyright);
+        assertEquals(COPYRIGHT, versionInfo.copyright);
         assertFalse(versionInfo.copyright.contains(projectInceptionYear));
         assertFalse(versionInfo.copyright.contains(organizationName));
     }
@@ -169,7 +169,7 @@ public class VersionInfoTest {
 
         // then
         assertNotNull(versionInfo.copyright);
-        assertNotEquals(copyright, versionInfo.copyright);
+        assertNotEquals(COPYRIGHT, versionInfo.copyright);
         assertTrue(versionInfo.copyright.contains(projectInceptionYear));
         assertTrue(versionInfo.copyright.contains(organizationName));
     }
@@ -200,9 +200,9 @@ public class VersionInfoTest {
 
         // then
         assertNotEquals(organizationName, versionInfo.companyName);
-        assertEquals(companyName, versionInfo.companyName);
+        assertEquals(COMPANY_NAME, versionInfo.companyName);
         assertNotEquals(organizationName, versionInfo.trademarks);
-        assertEquals(trademarks, versionInfo.trademarks);
+        assertEquals(TRADEMARKS, versionInfo.trademarks);
     }
 
     @Test
@@ -263,15 +263,15 @@ public class VersionInfoTest {
 
         // then
         assertNotEquals(projectVersion, versionInfo.txtFileVersion);
-        assertEquals(txtFileVersion, versionInfo.txtFileVersion);
+        assertEquals(TXT_FILE_VERSION, versionInfo.txtFileVersion);
         assertNotEquals(projectVersion, versionInfo.txtProductVersion);
-        assertEquals(txtProductVersion, versionInfo.txtProductVersion);
+        assertEquals(TXT_PRODUCT_VERSION, versionInfo.txtProductVersion);
         assertNotEquals(projectName, versionInfo.productName);
-        assertEquals(productName, versionInfo.productName);
+        assertEquals(PRODUCT_NAME, versionInfo.productName);
         assertNotEquals(projectArtifactId, versionInfo.internalName);
-        assertEquals(internalName, versionInfo.internalName);
+        assertEquals(INTERNAL_NAME, versionInfo.internalName);
         assertNotEquals(projectDescription, versionInfo.fileDescription);
-        assertEquals(fileDescription, versionInfo.fileDescription);
+        assertEquals(FILE_DESCRIPTION, versionInfo.fileDescription);
     }
 
     @Test
@@ -316,7 +316,7 @@ public class VersionInfoTest {
 
         // then
         assertNotEquals(outfileName, versionInfo.originalFilename);
-        assertEquals(originalFilename, versionInfo.originalFilename);
+        assertEquals(ORIGINAL_FILENAME, versionInfo.originalFilename);
     }
 
     @Test
@@ -340,17 +340,17 @@ public class VersionInfoTest {
 
         // then
         assertNotNull(result);
-        assertTrue(containsParam(result, "fileVersion", fileVersion));
-        assertTrue(containsParam(result, "txtFileVersion", txtFileVersion));
-        assertTrue(containsParam(result, "fileDescription", fileDescription));
-        assertTrue(containsParam(result, "copyright", copyright));
-        assertTrue(containsParam(result, "productVersion", productVersion));
-        assertTrue(containsParam(result, "txtProductVersion", txtProductVersion));
-        assertTrue(containsParam(result, "productName", productName));
-        assertTrue(containsParam(result, "companyName", companyName));
-        assertTrue(containsParam(result, "internalName", internalName));
-        assertTrue(containsParam(result, "originalFilename", originalFilename));
-        assertTrue(containsParam(result, "language", language));
-        assertTrue(containsParam(result, "trademarks", trademarks));
+        assertTrue(containsParam(result, "fileVersion", FILE_VERSION));
+        assertTrue(containsParam(result, "txtFileVersion", TXT_FILE_VERSION));
+        assertTrue(containsParam(result, "fileDescription", FILE_DESCRIPTION));
+        assertTrue(containsParam(result, "copyright", COPYRIGHT));
+        assertTrue(containsParam(result, "productVersion", PRODUCT_VERSION));
+        assertTrue(containsParam(result, "txtProductVersion", TXT_PRODUCT_VERSION));
+        assertTrue(containsParam(result, "productName", PRODUCT_NAME));
+        assertTrue(containsParam(result, "companyName", COMPANY_NAME));
+        assertTrue(containsParam(result, "internalName", INTERNAL_NAME));
+        assertTrue(containsParam(result, "originalFilename", ORIGINAL_FILENAME));
+        assertTrue(containsParam(result, "language", LANGUAGE));
+        assertTrue(containsParam(result, "trademarks", TRADEMARKS));
     }
 }
