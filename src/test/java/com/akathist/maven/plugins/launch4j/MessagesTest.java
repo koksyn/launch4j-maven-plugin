@@ -9,11 +9,11 @@ import static org.junit.Assert.*;
 
 public class MessagesTest {
     // Params
-    private final String STARTUP_ERR = "Mutex-1337";
-    private final String JRE_VERSION_ERR = "Mutex-1337";
-    private final String LAUNCHER_ERR = "Mutex-1337";
-    private final String INSTANCE_ALREADY_EXISTS_MSG = "Mutex-1337";
-    private final String JRE_NOT_FOUND_ERR = "Mutex-1337";
+    private final String STARTUP_ERR = "ANY_MESSAGE";
+    private final String JRE_VERSION_ERR = "ANY_JRE_VERSION";
+    private final String LAUNCHER_ERR = "ANY_ERROR";
+    private final String INSTANCE_ALREADY_EXISTS_MSG = "Instance already exists.";
+    private final String JRE_NOT_FOUND_ERR = "JRE was not found.";
 
     // Subject
     private Messages messages;
