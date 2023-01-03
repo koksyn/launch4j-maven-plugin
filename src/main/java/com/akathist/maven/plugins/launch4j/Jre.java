@@ -169,6 +169,30 @@ public class Jre {
     @Deprecated
     String runtimeBits;
 
+    public Jre() {
+    }
+
+    Jre(String path, String bundledJre64Bit, String bundledJreAsFallback,
+               boolean requires64Bit, String minVersion, String maxVersion,
+               String jdkPreference, boolean requiresJdk, int initialHeapSize,
+               int initialHeapPercent, int maxHeapSize, int maxHeapPercent,
+               List<String> opts, String runtimeBits) {
+        this.path = path;
+        this.bundledJre64Bit = bundledJre64Bit;
+        this.bundledJreAsFallback = bundledJreAsFallback;
+        this.requires64Bit = requires64Bit;
+        this.minVersion = minVersion;
+        this.maxVersion = maxVersion;
+        this.jdkPreference = jdkPreference;
+        this.requiresJdk = requiresJdk;
+        this.initialHeapSize = initialHeapSize;
+        this.initialHeapPercent = initialHeapPercent;
+        this.maxHeapSize = maxHeapSize;
+        this.maxHeapPercent = maxHeapPercent;
+        this.opts = opts;
+        this.runtimeBits = runtimeBits;
+    }
+
     net.sf.launch4j.config.Jre toL4j() {
         net.sf.launch4j.config.Jre ret = new net.sf.launch4j.config.Jre();
 
