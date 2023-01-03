@@ -21,10 +21,8 @@ package com.akathist.maven.plugins.launch4j;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.plugins.annotations.Parameter;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Set;
+import java.io.File;
+import java.util.*;
 
 public class ClassPath {
     /**
@@ -95,24 +93,29 @@ public class ClassPath {
         List<String> paths = new ArrayList<>();
 
         if (preCp != null) {
-            addToPaths(paths, preCp);
+            paths.addAll(rawPathToList(preCp));
         }
 
         if (addDependencies && dependencies != null) {
             fillJarLocation();
 
-            for (Artifact dependency : dependencies) {
-                String dependencyFilename = dependency.getFile()
-                        .getName();
-                paths.add(jarLocation + dependencyFilename);
-            }
+            dependencies.stream()
+                    .map(Artifact::getFile)
+                    .filter(Objects::nonNull)
+                    .map(File::getName)
+                    .map(dependencyFilename -> jarLocation + dependencyFilename)
+                    .forEach(paths::add);
         }
 
         if (postCp != null) {
-            addToPaths(paths, postCp);
+            paths.addAll(rawPathToList(postCp));
         }
 
         return paths;
+    }
+
+    private List<String> rawPathToList(String rawPath) {
+        return Arrays.asList(rawPath.split("\\s*;\\s*"));
     }
 
     private void fillJarLocation() {
@@ -122,14 +125,6 @@ public class ClassPath {
         else if (!jarLocation.endsWith("/")) {
             jarLocation += "/";
         }
-    }
-
-    private void addToPaths(List<String> paths, String rawPath) {
-        paths.addAll(
-                Arrays.asList(
-                        rawPath.split("\\s*;\\s*")
-                )
-        );
     }
 
     @Override
