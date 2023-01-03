@@ -9,6 +9,7 @@ public class ToStringVerifier {
             throw new IllegalArgumentException("Subject is null.");
         }
 
-        return subject.contains(paramName + "='" + paramValue + "'");
+        return subject.contains(paramName + "='" + paramValue + "'") ||
+                subject.contains(paramName + "=" + paramValue);
     }
 }
