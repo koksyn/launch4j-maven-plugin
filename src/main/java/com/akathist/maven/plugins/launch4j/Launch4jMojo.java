@@ -337,11 +337,13 @@ public class Launch4jMojo extends AbstractMojo {
     }
 
     private void doExecute() throws MojoExecutionException {
+        // skipping execution
         if (this.skipExecution()) {
             getLog().debug("Skipping execution of the plugin");
             return;
         }
 
+        // VersionInfo defaults
         if (!disableVersionInfoDefaults) {
             try {
                 if(versionInfo == null) {
@@ -353,29 +355,47 @@ public class Launch4jMojo extends AbstractMojo {
             }
         }
 
+        // data preparation
         final ConfigPersister configPersister = ConfigPersister.getInstance();
         final File workDir = setupBuildEnvironment();
+
+        // config load
+        Config config = null;
+        File configBaseDir = null;
         if (infile != null) {
             if (infile.exists()) {
+                if (getLog().isDebugEnabled()) {
+                    getLog().debug("Trying to load Launch4j native configuration using file=" + infile.getAbsolutePath());
+                }
+
                 try {
-                    Config config = generateConfigurationFromNativeFile(configPersister);
-                    configPersister.setAntConfig(config, infile.getParentFile());
+                    // load launch4j config file from <infile>
+                    configPersister.load(infile);
                 } catch (ConfigPersisterException e) {
                     getLog().error(e);
                     throw new MojoExecutionException("Could not load Launch4j native configuration file", e);
                 }
+
+                // retrieve the loaded configuration for manipulation
+                config = configPersister.getConfig();
+
+                overwriteConfiguration(config);
+                configBaseDir = infile.getParentFile();
             } else {
                 throw new MojoExecutionException("Launch4j native configuration file [" + infile.getAbsolutePath() + "] does not exist!");
             }
         } else {
-            Config config = generateConfigurationFromProperties(workDir);
-            configPersister.setAntConfig(config, getBaseDir());
+            config = generateConfigurationFromProperties(workDir);
+            configBaseDir = getBaseDir();
         }
+        configPersister.setAntConfig(config, configBaseDir);
 
+        // state log
         if (getLog().isDebugEnabled()) {
             printState(configPersister);
         }
 
+        // executable build
         final Builder builder = new Builder(new MavenLog(getLog()), workDir);
         try {
             builder.build();
@@ -384,6 +404,7 @@ public class Launch4jMojo extends AbstractMojo {
             throw new MojoExecutionException("Failed to build the executable; please verify your configuration.", e);
         }
 
+        // save config to XML
         if (saveConfig) {
             try {
                 configPersister.save(configOutfile);
@@ -393,53 +414,42 @@ public class Launch4jMojo extends AbstractMojo {
         }
     }
 
-    private Config generateConfigurationFromNativeFile(ConfigPersister configPersister) throws ConfigPersisterException {
-        if (getLog().isDebugEnabled()) {
-            getLog().debug("Trying to load Launch4j native configuration using file=" + infile.getAbsolutePath());
-        }
-        // load launch4j config file from <infile>
-        configPersister.load(infile);
-
+    private void overwriteConfiguration(Config config) {
         // overwrite several properties analogous to the ANT task
         // https://sourceforge.net/p/launch4j/git/ci/master/tree/src/net/sf/launch4j/ant/Launch4jTask.java#l84
 
-        // retrieve the loaded configuration for manipulation
-        Config c = configPersister.getConfig();
-
         String jarDefaultValue = project.getBuild().getDirectory() + "/" + project.getBuild().getFinalName() + ".jar";
         if (jar != null && !jar.equals(jarDefaultValue)) {
-            getLog().debug("Overwriting config file property 'jar' (='" + c.getJar().getAbsolutePath() + "') with local value '" + getJar().getAbsolutePath() + "'");
+            getLog().debug("Overwriting config file property 'jar' (='" + config.getJar().getAbsolutePath() + "') with local value '" + getJar().getAbsolutePath() + "'");
             // only overwrite when != defaultValue (should be != null anytime because of the default value)
-            c.setJar(getJar());
+            config.setJar(getJar());
         }
 
         File outFileDefaultValue = new File(project.getBuild().getDirectory() + "/" + project.getArtifactId() + ".exe");
         if (outfile != null && !outfile.getAbsolutePath().equals(outFileDefaultValue.getAbsolutePath())) {
             // only overwrite when != defaultValue (should be != null anytime because of the default value)
-            getLog().debug("Overwriting config file property 'outfile' (='" + c.getOutfile().getAbsolutePath() + "') with local value '" + outfile.getAbsolutePath() + "'");
-            c.setOutfile(outfile);
+            getLog().debug("Overwriting config file property 'outfile' (='" + config.getOutfile().getAbsolutePath() + "') with local value '" + outfile.getAbsolutePath() + "'");
+            config.setOutfile(outfile);
         }
 
         if (versionInfo != null) {
             if (versionInfo.fileVersion != null) {
-                getLog().debug("Overwriting config file property 'versionInfo.fileVersion' (='" + c.getVersionInfo().getFileVersion() + "') with local value '" + versionInfo.fileVersion + "'");
-                c.getVersionInfo().setFileVersion(versionInfo.fileVersion);
+                getLog().debug("Overwriting config file property 'versionInfo.fileVersion' (='" + config.getVersionInfo().getFileVersion() + "') with local value '" + versionInfo.fileVersion + "'");
+                config.getVersionInfo().setFileVersion(versionInfo.fileVersion);
             }
             if (versionInfo.txtFileVersion != null) {
-                getLog().debug("Overwriting config file property 'versionInfo.txtFileVersion' (='" + c.getVersionInfo().getTxtFileVersion() + "') with local value '" + versionInfo.txtFileVersion + "'");
-                c.getVersionInfo().setTxtFileVersion(versionInfo.txtFileVersion);
+                getLog().debug("Overwriting config file property 'versionInfo.txtFileVersion' (='" + config.getVersionInfo().getTxtFileVersion() + "') with local value '" + versionInfo.txtFileVersion + "'");
+                config.getVersionInfo().setTxtFileVersion(versionInfo.txtFileVersion);
             }
             if (versionInfo.productVersion != null) {
-                getLog().debug("Overwriting config file property 'versionInfo.productVersion' (='" + c.getVersionInfo().getProductVersion() + "') with local value '" + versionInfo.productVersion + "'");
-                c.getVersionInfo().setProductVersion(versionInfo.productVersion);
+                getLog().debug("Overwriting config file property 'versionInfo.productVersion' (='" + config.getVersionInfo().getProductVersion() + "') with local value '" + versionInfo.productVersion + "'");
+                config.getVersionInfo().setProductVersion(versionInfo.productVersion);
             }
             if (versionInfo.txtProductVersion != null) {
-                getLog().debug("Overwriting config file property 'versionInfo.txtProductVersion' (='" + c.getVersionInfo().getTxtProductVersion() + "') with local value '" + versionInfo.txtProductVersion + "'");
-                c.getVersionInfo().setTxtProductVersion(versionInfo.txtProductVersion);
+                getLog().debug("Overwriting config file property 'versionInfo.txtProductVersion' (='" + config.getVersionInfo().getTxtProductVersion() + "') with local value '" + versionInfo.txtProductVersion + "'");
+                config.getVersionInfo().setTxtProductVersion(versionInfo.txtProductVersion);
             }
         }
-
-        return c;
     }
 
 
