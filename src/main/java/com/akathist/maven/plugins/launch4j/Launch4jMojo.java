@@ -36,22 +36,15 @@ import org.apache.maven.project.MavenProject;
 import org.apache.maven.project.ProjectBuildingRequest;
 import org.apache.maven.repository.RepositorySystem;
 import org.apache.maven.shared.transfer.artifact.resolve.ArtifactResolver;
-import org.apache.maven.shared.transfer.artifact.resolve.ArtifactResolverException;
 
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
-import java.util.Date;
-import java.util.Enumeration;
 import java.util.List;
 import java.util.Set;
-import java.util.jar.JarEntry;
-import java.util.jar.JarFile;
 
 /**
  * Wraps a jar in a Windows executable.
@@ -63,11 +56,6 @@ import java.util.jar.JarFile;
         threadSafe = true
 )
 public class Launch4jMojo extends AbstractMojo {
-
-    private static final String LAUNCH4J_ARTIFACT_ID = "launch4j";
-
-    private static final String LAUNCH4J_GROUP_ID = "net.sf.launch4j";
-
     /**
      * Maven Session.
      */
@@ -415,11 +403,24 @@ public class Launch4jMojo extends AbstractMojo {
         FileSystemSetup fileSystemSetup = new FileSystemSetup(getLog());
         fileSystemSetup.createParentFolderQuietly(outfile);
 
-        Artifact binaryBits = chooseBinaryBits();
-        retrieveBinaryBits(binaryBits);
+        Launch4jArtifactCreator launch4jArtifactCreator = new Launch4jArtifactCreator(
+                getLog(),
+                resolver,
+                factory,
+                pluginArtifacts
+        );
+        Artifact launch4jArtifactTemplate = launch4jArtifactCreator.chooseBinaryBits();
 
-        Artifact localArtifact = localRepository.find(binaryBits);
-        return fileSystemSetup.unpackWorkDir(localArtifact);
+        // todo: a separate method
+        ProjectBuildingRequest configuration = session.getProjectBuildingRequest();
+        configuration.setRemoteRepositories(project.getRemoteArtifactRepositories());
+        configuration.setLocalRepository(localRepository);
+        configuration.setProject(session.getCurrentProject());
+        // ---
+        launch4jArtifactCreator.retrieveBinaryBits(configuration, launch4jArtifactTemplate);
+
+        Artifact launch4jArtifact = localRepository.find(launch4jArtifactTemplate);
+        return fileSystemSetup.unpackWorkDir(launch4jArtifact);
     }
 
     private boolean tryCheckInfileExists() throws MojoExecutionException {
@@ -556,58 +557,6 @@ public class Launch4jMojo extends AbstractMojo {
         }
     }
 
-    /**
-     * Decides which platform-specific bundle we need, based on the current operating system.
-     */
-    private Artifact chooseBinaryBits() throws MojoExecutionException {
-        String plat;
-        String os = System.getProperty("os.name");
-        String arch = System.getProperty("os.arch");
-        getLog().debug("OS = " + os);
-        getLog().debug("Architecture = " + arch);
-
-        // See here for possible values of os.name:
-        // http://lopica.sourceforge.net/os.html
-        if (os.startsWith("Windows")) {
-            plat = "win32";
-        } else if ("Linux".equals(os)) {
-            if ("amd64".equals(arch)) {
-                plat = "linux64";
-            } else {
-                plat = "linux";
-            }
-        } else if ("Solaris".equals(os) || "SunOS".equals(os)) {
-            plat = "solaris";
-        } else if ("Mac OS X".equals(os) || "Darwin".equals(os)) {
-            plat = "mac";
-        } else {
-            throw new MojoExecutionException("Sorry, Launch4j doesn't support the '" + os + "' OS.");
-        }
-
-        return factory.createArtifactWithClassifier(LAUNCH4J_GROUP_ID, LAUNCH4J_ARTIFACT_ID,
-                getLaunch4jVersion(), "jar", "workdir-" + plat);
-    }
-
-    /**
-     * Downloads the platform-specific parts, if necessary.
-     */
-    private void retrieveBinaryBits(Artifact a) throws MojoExecutionException {
-        ProjectBuildingRequest configuration = session.getProjectBuildingRequest();
-        configuration.setRemoteRepositories(project.getRemoteArtifactRepositories());
-        configuration.setLocalRepository(localRepository);
-        configuration.setProject(session.getCurrentProject());
-
-        getLog().debug("Retrieving artifact: " + a + " stored in " + a.getFile());
-
-        try {
-            resolver.resolveArtifact(configuration, a).getArtifact();
-        } catch (IllegalArgumentException e) {
-            throw new MojoExecutionException("Illegal Argument Exception", e);
-        } catch (ArtifactResolverException e) {
-            throw new MojoExecutionException("Can't retrieve platform-specific components", e);
-        }
-    }
-
     private Config tryGetOverwrittenNativeConfiguration(ConfigPersister configPersister) throws MojoExecutionException {
         if (getLog().isDebugEnabled()) {
             getLog().debug("Trying to load Launch4j native configuration using file=" + infile.getAbsolutePath());
@@ -740,35 +689,6 @@ public class Launch4jMojo extends AbstractMojo {
         }
 
         return result;
-    }
-
-    /**
-     * A version of the Launch4j used by the plugin.
-     * We want to download the platform-specific bundle whose version matches the Launch4j version,
-     * so we have to figure out what version the plugin is using.
-     *
-     * @return version of Launch4j
-     * @throws MojoExecutionException when version is null
-     */
-    private String getLaunch4jVersion() throws MojoExecutionException {
-        String version = null;
-
-        for (Artifact artifact : pluginArtifacts) {
-            if (LAUNCH4J_GROUP_ID.equals(artifact.getGroupId()) &&
-                    LAUNCH4J_ARTIFACT_ID.equals(artifact.getArtifactId())
-                    && "core".equals(artifact.getClassifier())) {
-
-                version = artifact.getVersion();
-                getLog().debug("Found launch4j version " + version);
-                break;
-            }
-        }
-
-        if (version == null) {
-            throw new MojoExecutionException("Impossible to find which Launch4j version to use");
-        }
-
-        return version;
     }
 
     private File getJar() {
