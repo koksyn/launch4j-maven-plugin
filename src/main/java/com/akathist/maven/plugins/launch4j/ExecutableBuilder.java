@@ -6,16 +6,16 @@ import org.apache.maven.plugin.logging.Log;
 
 import java.io.File;
 
-public class ExecutableBuilder {
+class ExecutableBuilder {
     private final Log log;
     private final MavenLog mavenLog;
 
-    public ExecutableBuilder(Log log) {
+    ExecutableBuilder(Log log) {
         this.log = log;
         this.mavenLog = new MavenLog(log);
     }
 
-    public void build(File baseDirectory) {
+    void build(File baseDirectory) {
         if(baseDirectory == null) {
             throw new IllegalArgumentException("Base directory is null.");
         }
