@@ -412,7 +412,8 @@ public class Launch4jMojo extends AbstractMojo {
      * @return the work directory.
      */
     private File setupBuildEnvironmentAndGetWorkDir() throws MojoExecutionException {
-        createParentFolder();
+        FileSystemSetup fileSystemSetup = new FileSystemSetup(getLog());
+        fileSystemSetup.createParentFolderQuietly(outfile);
         Artifact binaryBits = chooseBinaryBits();
         retrieveBinaryBits(binaryBits);
         return unpackWorkDir(binaryBits);
@@ -549,21 +550,6 @@ public class Launch4jMojo extends AbstractMojo {
             configPersister.save(configOutfile);
         } catch (ConfigPersisterException e) {
             throw new MojoExecutionException("Cannot save config into a XML file", e);
-        }
-    }
-
-    private void createParentFolder() {
-        if (outfile != null) {
-            File parent = outfile.getParentFile();
-            if (!parent.exists()) {
-                getLog().debug("Parent " + parent.getPath() + " does not exist, creating it!");
-                boolean created = parent.mkdirs();
-                if (created) {
-                    getLog().debug("Parent " + parent.getPath() + " has been created!");
-                } else {
-                    getLog().warn("Cannot create parent " + parent.getPath() + "!");
-                }
-            }
         }
     }
 
