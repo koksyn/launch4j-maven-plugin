@@ -18,8 +18,6 @@
  */
 package com.akathist.maven.plugins.launch4j;
 
-import net.sf.launch4j.Builder;
-import net.sf.launch4j.BuilderException;
 import net.sf.launch4j.config.Config;
 import net.sf.launch4j.config.ConfigPersister;
 import net.sf.launch4j.config.ConfigPersisterException;
@@ -337,164 +335,58 @@ public class Launch4jMojo extends AbstractMojo {
     }
 
     private void doExecute() throws MojoExecutionException {
-        // skipping execution
         if (this.skipExecution()) {
-            getLog().debug("Skipping execution of the plugin");
+            getLog().debug("Skipping execution of the plugin.");
             return;
         }
 
-        // VersionInfo defaults
         if (!disableVersionInfoDefaults) {
-            try {
-                if(versionInfo == null) {
-                    versionInfo = new VersionInfo();
-                }
-                versionInfo.tryFillOutByDefaults(project, outfile);
-            } catch (RuntimeException exception) {
-                throw new MojoExecutionException("Cannot fill out VersionInfo by defaults", exception);
-            }
+            tryFillOutVersionInfoByDefaults();
         }
 
-        // data preparation
+        // Setup environment
+        final File workDir = setupBuildEnvironmentAndGetWorkDir();
+
+        // Setup configuration
+        final boolean infileExists = tryCheckInfileExists();
         final ConfigPersister configPersister = ConfigPersister.getInstance();
-        final File workDir = setupBuildEnvironment();
-
-        // config load
-        Config config = null;
-        File configBaseDir = null;
-        if (infile != null) {
-            if (infile.exists()) {
-                if (getLog().isDebugEnabled()) {
-                    getLog().debug("Trying to load Launch4j native configuration using file=" + infile.getAbsolutePath());
-                }
-
-                try {
-                    // load launch4j config file from <infile>
-                    configPersister.load(infile);
-                } catch (ConfigPersisterException e) {
-                    getLog().error(e);
-                    throw new MojoExecutionException("Could not load Launch4j native configuration file", e);
-                }
-
-                // retrieve the loaded configuration for manipulation
-                config = configPersister.getConfig();
-
-                overwriteConfiguration(config);
-                configBaseDir = infile.getParentFile();
-            } else {
-                throw new MojoExecutionException("Launch4j native configuration file [" + infile.getAbsolutePath() + "] does not exist!");
-            }
-        } else {
-            config = generateConfigurationFromProperties(workDir);
-            configBaseDir = getBaseDir();
-        }
+        final Config config = generateConfiguration(configPersister, workDir, infileExists);
+        final File configBaseDir = generateConfigBaseDir(infileExists);
         configPersister.setAntConfig(config, configBaseDir);
 
-        // state log debug
+        // Log configuration
         if (getLog().isDebugEnabled()) {
-            printState(configPersister.getConfig());
+            logConfigState(config);
         }
 
-        // executable build
-        ExecutableBuilder executableBuilder = new ExecutableBuilder(getLog());
-        try {
-            executableBuilder.build(workDir);
-        } catch (RuntimeException exception) {
-            throw new MojoExecutionException("Failed to build the executable", exception);
-        }
+        tryBuildExecutable(workDir);
 
-        // save config to XML
         if (saveConfig) {
-            try {
-                configPersister.save(configOutfile);
-            } catch (ConfigPersisterException e) {
-                throw new MojoExecutionException("Cannot save config into a XML file", e);
-            }
+            trySaveConfigIntoXMLFile(configPersister);
         }
     }
 
-    private void overwriteConfiguration(Config config) {
-        // overwrite several properties analogous to the ANT task
-        // https://sourceforge.net/p/launch4j/git/ci/master/tree/src/net/sf/launch4j/ant/Launch4jTask.java#l84
+    /**
+     * Checks if execution of the plugin should be skipped
+     *
+     * @return true to skip execution
+     */
+    private boolean skipExecution() {
+        getLog().debug("skip = " + this.skip);
+        getLog().debug("skipLaunch4j = " + System.getProperty("skipLaunch4j"));
 
-        String jarDefaultValue = project.getBuild().getDirectory() + "/" + project.getBuild().getFinalName() + ".jar";
-        if (jar != null && !jar.equals(jarDefaultValue)) {
-            getLog().debug("Overwriting config file property 'jar' (='" + config.getJar().getAbsolutePath() + "') with local value '" + getJar().getAbsolutePath() + "'");
-            // only overwrite when != defaultValue (should be != null anytime because of the default value)
-            config.setJar(getJar());
-        }
-
-        File outFileDefaultValue = new File(project.getBuild().getDirectory() + "/" + project.getArtifactId() + ".exe");
-        if (outfile != null && !outfile.getAbsolutePath().equals(outFileDefaultValue.getAbsolutePath())) {
-            // only overwrite when != defaultValue (should be != null anytime because of the default value)
-            getLog().debug("Overwriting config file property 'outfile' (='" + config.getOutfile().getAbsolutePath() + "') with local value '" + outfile.getAbsolutePath() + "'");
-            config.setOutfile(outfile);
-        }
-
-        if (versionInfo != null) {
-            if (versionInfo.fileVersion != null) {
-                getLog().debug("Overwriting config file property 'versionInfo.fileVersion' (='" + config.getVersionInfo().getFileVersion() + "') with local value '" + versionInfo.fileVersion + "'");
-                config.getVersionInfo().setFileVersion(versionInfo.fileVersion);
-            }
-            if (versionInfo.txtFileVersion != null) {
-                getLog().debug("Overwriting config file property 'versionInfo.txtFileVersion' (='" + config.getVersionInfo().getTxtFileVersion() + "') with local value '" + versionInfo.txtFileVersion + "'");
-                config.getVersionInfo().setTxtFileVersion(versionInfo.txtFileVersion);
-            }
-            if (versionInfo.productVersion != null) {
-                getLog().debug("Overwriting config file property 'versionInfo.productVersion' (='" + config.getVersionInfo().getProductVersion() + "') with local value '" + versionInfo.productVersion + "'");
-                config.getVersionInfo().setProductVersion(versionInfo.productVersion);
-            }
-            if (versionInfo.txtProductVersion != null) {
-                getLog().debug("Overwriting config file property 'versionInfo.txtProductVersion' (='" + config.getVersionInfo().getTxtProductVersion() + "') with local value '" + versionInfo.txtProductVersion + "'");
-                config.getVersionInfo().setTxtProductVersion(versionInfo.txtProductVersion);
-            }
-        }
+        return skip || System.getProperty("skipLaunch4j") != null;
     }
 
-
-    private Config generateConfigurationFromProperties(File workDir) throws MojoExecutionException {
-        final Config c = new Config();
-
-        c.setHeaderType(headerType);
-        c.setOutfile(outfile);
-        c.setJar(getJar());
-        c.setDontWrapJar(dontWrapJar);
-        c.setErrTitle(errTitle);
-        c.setDownloadUrl(downloadUrl);
-        c.setSupportUrl(supportUrl);
-        c.setCmdLine(cmdLine);
-        c.setChdir(chdir);
-        c.setPriority(priority);
-        c.setStayAlive(stayAlive);
-        c.setRestartOnCrash(restartOnCrash);
-        c.setManifest(manifest);
-        c.setIcon(icon);
-        c.setHeaderObjects(relativizeAndCopy(workDir, objs));
-        c.setLibs(relativizeAndCopy(workDir, libs));
-        c.setVariables(vars);
-
-        if (classPath != null) {
-            c.setClassPath(classPath.toL4j(dependencies));
+    private void tryFillOutVersionInfoByDefaults() throws MojoExecutionException {
+        try {
+            if (versionInfo == null) {
+                versionInfo = new VersionInfo();
+            }
+            versionInfo.tryFillOutByDefaults(project, outfile);
+        } catch (RuntimeException exception) {
+            throw new MojoExecutionException("Cannot fill out VersionInfo by defaults", exception);
         }
-        if (jre != null) {
-            jre.deprecationWarning(getLog());
-            c.setJre(jre.toL4j());
-        }
-        if (singleInstance != null) {
-            c.setSingleInstance(singleInstance.toL4j());
-        }
-        if (splash != null) {
-            c.setSplash(splash.toL4j());
-        }
-        if (versionInfo != null) {
-            c.setVersionInfo(versionInfo.toL4j());
-        }
-        if (messages != null) {
-            messages.deprecationWarning(getLog());
-            c.setMessages(messages.toL4j());
-        }
-
-        return c;
     }
 
     /**
@@ -519,11 +411,145 @@ public class Launch4jMojo extends AbstractMojo {
      *
      * @return the work directory.
      */
-    private File setupBuildEnvironment() throws MojoExecutionException {
+    private File setupBuildEnvironmentAndGetWorkDir() throws MojoExecutionException {
         createParentFolder();
         Artifact binaryBits = chooseBinaryBits();
         retrieveBinaryBits(binaryBits);
         return unpackWorkDir(binaryBits);
+    }
+
+    private boolean tryCheckInfileExists() throws MojoExecutionException {
+        if (infile != null) {
+            if (infile.exists()) {
+                return true;
+            } else {
+                throw new MojoExecutionException("Launch4j native configuration file [" + infile.getAbsolutePath() + "] does not exist!");
+            }
+        }
+
+        return false;
+    }
+
+    private Config generateConfiguration(ConfigPersister configPersister, File workDir, boolean infileExists) throws MojoExecutionException {
+        if (infileExists) {
+            return tryGetOverwrittenNativeConfiguration(configPersister);
+        } else {
+            return generateConfigurationFromProperties(workDir);
+        }
+    }
+
+    private File generateConfigBaseDir(boolean infileExists) {
+        if (infileExists) {
+            return infile.getParentFile();
+        } else {
+            return basedir;
+        }
+    }
+
+    /**
+     * Just prints out how we were configured.
+     */
+    private void logConfigState(Config config) {
+        Log log = getLog();
+
+        log.debug("headerType = " + config.getHeaderType());
+        log.debug("outfile = " + config.getOutfile());
+        log.debug("jar = " + config.getJar());
+        log.debug("dontWrapJar = " + config.isDontWrapJar());
+        log.debug("errTitle = " + config.getErrTitle());
+        log.debug("downloadUrl = " + config.getDownloadUrl());
+        log.debug("supportUrl = " + config.getSupportUrl());
+        log.debug("cmdLine = " + config.getCmdLine());
+        log.debug("chdir = " + config.getChdir());
+        log.debug("priority = " + config.getPriority());
+        log.debug("stayAlive = " + config.isStayAlive());
+        log.debug("restartOnCrash = " + config.isRestartOnCrash());
+        log.debug("icon = " + config.getIcon());
+        log.debug("objs = " + config.getHeaderObjects());
+        log.debug("libs = " + config.getLibs());
+        log.debug("vars = " + config.getVariables());
+        if (config.getSingleInstance() != null) {
+            log.debug("singleInstance.mutexName = " + config.getSingleInstance().getMutexName());
+            log.debug("singleInstance.windowTitle = " + config.getSingleInstance().getWindowTitle());
+        } else {
+            log.debug("singleInstance = null");
+        }
+        if (config.getJre() != null) {
+            log.debug("jre.path = " + config.getJre().getPath());
+            log.debug("jre.minVersion = " + config.getJre().getMinVersion());
+            log.debug("jre.maxVersion = " + config.getJre().getMaxVersion());
+            log.debug("jre.requiresJdk = " + config.getJre().getRequiresJdk());
+            log.debug("jre.requires64Bit = " + config.getJre().getRequires64Bit());
+            log.debug("jre.initialHeapSize = " + config.getJre().getInitialHeapSize());
+            log.debug("jre.initialHeapPercent = " + config.getJre().getInitialHeapPercent());
+            log.debug("jre.maxHeapSize = " + config.getJre().getMaxHeapSize());
+            log.debug("jre.maxHeapPercent = " + config.getJre().getMaxHeapPercent());
+            log.debug("jre.opts = " + config.getJre().getOptions());
+        } else {
+            log.debug("jre = null");
+        }
+        if (config.getClassPath() != null) {
+            log.debug("classPath.mainClass = " + config.getClassPath().getMainClass());
+        }
+        if (classPath != null) {
+            log.debug("classPath.addDependencies = " + classPath.addDependencies);
+            log.debug("classPath.jarLocation = " + classPath.jarLocation);
+            log.debug("classPath.preCp = " + classPath.preCp);
+            log.debug("classPath.postCp = " + classPath.postCp);
+        } else {
+            log.info("classpath = null");
+        }
+        if (config.getSplash() != null) {
+            log.debug("splash.file = " + config.getSplash().getFile());
+            log.debug("splash.waitForWindow = " + config.getSplash().getWaitForWindow());
+            log.debug("splash.timeout = " + config.getSplash().getTimeout());
+            log.debug("splash.timoutErr = " + config.getSplash().isTimeoutErr());
+        } else {
+            log.debug("splash = null");
+        }
+        if (config.getVersionInfo() != null) {
+            log.debug("versionInfo.fileVersion = " + config.getVersionInfo().getFileVersion());
+            log.debug("versionInfo.txtFileVersion = " + config.getVersionInfo().getTxtFileVersion());
+            log.debug("versionInfo.fileDescription = " + config.getVersionInfo().getFileDescription());
+            log.debug("versionInfo.copyright = " + config.getVersionInfo().getCopyright());
+            log.debug("versionInfo.productVersion = " + config.getVersionInfo().getProductVersion());
+            log.debug("versionInfo.txtProductVersion = " + config.getVersionInfo().getTxtProductVersion());
+            log.debug("versionInfo.productName = " + config.getVersionInfo().getProductName());
+            log.debug("versionInfo.companyName = " + config.getVersionInfo().getCompanyName());
+            log.debug("versionInfo.internalName = " + config.getVersionInfo().getInternalName());
+            log.debug("versionInfo.originalFilename = " + config.getVersionInfo().getOriginalFilename());
+            log.debug("versionInfo.language = " + config.getVersionInfo().getLanguage());
+            log.debug("versionInfo.languageIndex = " + config.getVersionInfo().getLanguageIndex());
+            log.debug("versionInfo.trademarks = " + config.getVersionInfo().getTrademarks());
+        } else {
+            log.debug("versionInfo = null");
+        }
+        if (config.getMessages() != null) {
+            log.debug("messages.startupErr = " + config.getMessages().getStartupErr());
+            log.debug("messages.jreNotFoundErr = " + config.getMessages().getJreNotFoundErr());
+            log.debug("messages.jreVersionErr = " + config.getMessages().getJreVersionErr());
+            log.debug("messages.launcherErr = " + config.getMessages().getLauncherErr());
+            log.debug("messages.instanceAlreadyExistsMsg = " + config.getMessages().getInstanceAlreadyExistsMsg());
+        } else {
+            log.debug("messages = null");
+        }
+    }
+
+    private void tryBuildExecutable(File baseDirectory) throws MojoExecutionException {
+        try {
+            ExecutableBuilder executableBuilder = new ExecutableBuilder(getLog());
+            executableBuilder.build(baseDirectory);
+        } catch (RuntimeException exception) {
+            throw new MojoExecutionException("Failed to build the executable", exception);
+        }
+    }
+
+    private void trySaveConfigIntoXMLFile(ConfigPersister configPersister) throws MojoExecutionException {
+        try {
+            configPersister.save(configOutfile);
+        } catch (ConfigPersisterException e) {
+            throw new MojoExecutionException("Cannot save config into a XML file", e);
+        }
     }
 
     private void createParentFolder() {
@@ -538,6 +564,58 @@ public class Launch4jMojo extends AbstractMojo {
                     getLog().warn("Cannot create parent " + parent.getPath() + "!");
                 }
             }
+        }
+    }
+
+    /**
+     * Decides which platform-specific bundle we need, based on the current operating system.
+     */
+    private Artifact chooseBinaryBits() throws MojoExecutionException {
+        String plat;
+        String os = System.getProperty("os.name");
+        String arch = System.getProperty("os.arch");
+        getLog().debug("OS = " + os);
+        getLog().debug("Architecture = " + arch);
+
+        // See here for possible values of os.name:
+        // http://lopica.sourceforge.net/os.html
+        if (os.startsWith("Windows")) {
+            plat = "win32";
+        } else if ("Linux".equals(os)) {
+            if ("amd64".equals(arch)) {
+                plat = "linux64";
+            } else {
+                plat = "linux";
+            }
+        } else if ("Solaris".equals(os) || "SunOS".equals(os)) {
+            plat = "solaris";
+        } else if ("Mac OS X".equals(os) || "Darwin".equals(os)) {
+            plat = "mac";
+        } else {
+            throw new MojoExecutionException("Sorry, Launch4j doesn't support the '" + os + "' OS.");
+        }
+
+        return factory.createArtifactWithClassifier(LAUNCH4J_GROUP_ID, LAUNCH4J_ARTIFACT_ID,
+                getLaunch4jVersion(), "jar", "workdir-" + plat);
+    }
+
+    /**
+     * Downloads the platform-specific parts, if necessary.
+     */
+    private void retrieveBinaryBits(Artifact a) throws MojoExecutionException {
+        ProjectBuildingRequest configuration = session.getProjectBuildingRequest();
+        configuration.setRemoteRepositories(project.getRemoteArtifactRepositories());
+        configuration.setLocalRepository(localRepository);
+        configuration.setProject(session.getCurrentProject());
+
+        getLog().debug("Retrieving artifact: " + a + " stored in " + a.getFile());
+
+        try {
+            resolver.resolveArtifact(configuration, a).getArtifact();
+        } catch (IllegalArgumentException e) {
+            throw new MojoExecutionException("Illegal Argument Exception", e);
+        } catch (ArtifactResolverException e) {
+            throw new MojoExecutionException("Can't retrieve platform-specific components", e);
         }
     }
 
@@ -560,7 +638,7 @@ public class Launch4jMojo extends AbstractMojo {
         // If the artifact is a SNAPSHOT, then a.getVersion() will report the long timestamp,
         // but getFile() will be 1.1-SNAPSHOT.
         // Since getFile() doesn't use the timestamp, all timestamps wind up in the same place.
-        // Therefore we need to expand the jar every time, if the marker file is stale.
+        // Therefore, we need to expand the jar every time, if the marker file is stale.
         if (marker.exists() && marker.lastModified() > platJar.lastModified()) {
             // if (marker.exists() && marker.platJar.getName().indexOf("SNAPSHOT") == -1) {
             getLog().info("Platform-specific work directory already exists: " + workdir.getAbsolutePath());
@@ -605,6 +683,109 @@ public class Launch4jMojo extends AbstractMojo {
 
         setPermissions(workdir);
         return workdir;
+    }
+
+    private Config tryGetOverwrittenNativeConfiguration(ConfigPersister configPersister) throws MojoExecutionException {
+        if (getLog().isDebugEnabled()) {
+            getLog().debug("Trying to load Launch4j native configuration using file=" + infile.getAbsolutePath());
+        }
+
+        try {
+            // load launch4j config file from <infile>
+            configPersister.load(infile);
+        } catch (ConfigPersisterException e) {
+            getLog().error(e);
+            throw new MojoExecutionException("Could not load Launch4j native configuration file", e);
+        }
+
+        // retrieve the loaded configuration for manipulation
+        Config config = configPersister.getConfig();
+        overwriteConfiguration(config);
+
+        return config;
+    }
+
+    private Config generateConfigurationFromProperties(File workDir) throws MojoExecutionException {
+        final Config config = new Config();
+
+        config.setHeaderType(headerType);
+        config.setOutfile(outfile);
+        config.setJar(getJar());
+        config.setDontWrapJar(dontWrapJar);
+        config.setErrTitle(errTitle);
+        config.setDownloadUrl(downloadUrl);
+        config.setSupportUrl(supportUrl);
+        config.setCmdLine(cmdLine);
+        config.setChdir(chdir);
+        config.setPriority(priority);
+        config.setStayAlive(stayAlive);
+        config.setRestartOnCrash(restartOnCrash);
+        config.setManifest(manifest);
+        config.setIcon(icon);
+        config.setHeaderObjects(relativizeAndCopy(workDir, objs));
+        config.setLibs(relativizeAndCopy(workDir, libs));
+        config.setVariables(vars);
+
+        if (classPath != null) {
+            config.setClassPath(classPath.toL4j(dependencies));
+        }
+        if (jre != null) {
+            jre.deprecationWarning(getLog());
+            config.setJre(jre.toL4j());
+        }
+        if (singleInstance != null) {
+            config.setSingleInstance(singleInstance.toL4j());
+        }
+        if (splash != null) {
+            config.setSplash(splash.toL4j());
+        }
+        if (versionInfo != null) {
+            config.setVersionInfo(versionInfo.toL4j());
+        }
+        if (messages != null) {
+            messages.deprecationWarning(getLog());
+            config.setMessages(messages.toL4j());
+        }
+
+        return config;
+    }
+
+    private void overwriteConfiguration(Config config) {
+        // overwrite several properties analogous to the ANT task
+        // https://sourceforge.net/p/launch4j/git/ci/master/tree/src/net/sf/launch4j/ant/Launch4jTask.java#l84
+
+        String jarDefaultValue = project.getBuild().getDirectory() + "/" + project.getBuild().getFinalName() + ".jar";
+        if (jar != null && !jar.equals(jarDefaultValue)) {
+            getLog().debug("Overwriting config file property 'jar' (='" + config.getJar().getAbsolutePath() + "') with local value '" + getJar().getAbsolutePath() + "'");
+            // only overwrite when != defaultValue (should be != null anytime because of the default value)
+            config.setJar(getJar());
+        }
+
+        File outFileDefaultValue = new File(project.getBuild().getDirectory() + "/" + project.getArtifactId() + ".exe");
+        if (outfile != null && !outfile.getAbsolutePath().equals(outFileDefaultValue.getAbsolutePath())) {
+            // only overwrite when != defaultValue (should be != null anytime because of the default value)
+            getLog().debug("Overwriting config file property 'outfile' (='" + config.getOutfile().getAbsolutePath() + "') with local value '" + outfile.getAbsolutePath() + "'");
+            config.setOutfile(outfile);
+        }
+
+        if (versionInfo != null) {
+            if (versionInfo.fileVersion != null) {
+                getLog().debug("Overwriting config file property 'versionInfo.fileVersion' (='" + config.getVersionInfo().getFileVersion() + "') with local value '" + versionInfo.fileVersion + "'");
+                config.getVersionInfo().setFileVersion(versionInfo.fileVersion);
+            }
+            if (versionInfo.txtFileVersion != null) {
+                getLog().debug("Overwriting config file property 'versionInfo.txtFileVersion' (='" + config.getVersionInfo().getTxtFileVersion() + "') with local value '" + versionInfo.txtFileVersion + "'");
+                config.getVersionInfo().setTxtFileVersion(versionInfo.txtFileVersion);
+            }
+            if (versionInfo.productVersion != null) {
+                getLog().debug("Overwriting config file property 'versionInfo.productVersion' (='" + config.getVersionInfo().getProductVersion() + "') with local value '" + versionInfo.productVersion + "'");
+                config.getVersionInfo().setProductVersion(versionInfo.productVersion);
+            }
+            if (versionInfo.txtProductVersion != null) {
+                getLog().debug("Overwriting config file property 'versionInfo.txtProductVersion' (='" + config.getVersionInfo().getTxtProductVersion() + "') with local value '" + versionInfo.txtProductVersion + "'");
+                config.getVersionInfo().setTxtProductVersion(versionInfo.txtProductVersion);
+            }
+        }
     }
 
     /**
@@ -655,152 +836,6 @@ public class Launch4jMojo extends AbstractMojo {
     }
 
     /**
-     * Downloads the platform-specific parts, if necessary.
-     */
-    private void retrieveBinaryBits(Artifact a) throws MojoExecutionException {
-
-        ProjectBuildingRequest configuration = session.getProjectBuildingRequest();
-        configuration.setRemoteRepositories(project.getRemoteArtifactRepositories());
-        configuration.setLocalRepository(localRepository);
-        configuration.setProject(session.getCurrentProject());
-
-        getLog().debug("Retrieving artifact: " + a + " stored in " + a.getFile());
-
-        try {
-            resolver.resolveArtifact(configuration, a).getArtifact();
-        } catch (IllegalArgumentException e) {
-            throw new MojoExecutionException("Illegal Argument Exception", e);
-        } catch (ArtifactResolverException e) {
-            throw new MojoExecutionException("Can't retrieve platform-specific components", e);
-        }
-    }
-
-    /**
-     * Decides which platform-specific bundle we need, based on the current operating system.
-     */
-    private Artifact chooseBinaryBits() throws MojoExecutionException {
-        String plat;
-        String os = System.getProperty("os.name");
-        String arch = System.getProperty("os.arch");
-        getLog().debug("OS = " + os);
-        getLog().debug("Architecture = " + arch);
-
-        // See here for possible values of os.name:
-        // http://lopica.sourceforge.net/os.html
-        if (os.startsWith("Windows")) {
-            plat = "win32";
-        } else if ("Linux".equals(os)) {
-            if ("amd64".equals(arch)) {
-                plat = "linux64";
-            } else {
-                plat = "linux";
-            }
-        } else if ("Solaris".equals(os) || "SunOS".equals(os)) {
-            plat = "solaris";
-        } else if ("Mac OS X".equals(os) || "Darwin".equals(os)) {
-            plat = "mac";
-        } else {
-            throw new MojoExecutionException("Sorry, Launch4j doesn't support the '" + os + "' OS.");
-        }
-
-        return factory.createArtifactWithClassifier(LAUNCH4J_GROUP_ID, LAUNCH4J_ARTIFACT_ID,
-                getLaunch4jVersion(), "jar", "workdir-" + plat);
-    }
-
-    private File getBaseDir() {
-        return basedir;
-    }
-
-    /**
-     * Just prints out how we were configured.
-     */
-    private void printState(Config c) {
-        Log log = getLog();
-
-        log.debug("headerType = " + c.getHeaderType());
-        log.debug("outfile = " + c.getOutfile());
-        log.debug("jar = " + c.getJar());
-        log.debug("dontWrapJar = " + c.isDontWrapJar());
-        log.debug("errTitle = " + c.getErrTitle());
-        log.debug("downloadUrl = " + c.getDownloadUrl());
-        log.debug("supportUrl = " + c.getSupportUrl());
-        log.debug("cmdLine = " + c.getCmdLine());
-        log.debug("chdir = " + c.getChdir());
-        log.debug("priority = " + c.getPriority());
-        log.debug("stayAlive = " + c.isStayAlive());
-        log.debug("restartOnCrash = " + c.isRestartOnCrash());
-        log.debug("icon = " + c.getIcon());
-        log.debug("objs = " + c.getHeaderObjects());
-        log.debug("libs = " + c.getLibs());
-        log.debug("vars = " + c.getVariables());
-        if (c.getSingleInstance() != null) {
-            log.debug("singleInstance.mutexName = " + c.getSingleInstance().getMutexName());
-            log.debug("singleInstance.windowTitle = " + c.getSingleInstance().getWindowTitle());
-        } else {
-            log.debug("singleInstance = null");
-        }
-        if (c.getJre() != null) {
-            log.debug("jre.path = " + c.getJre().getPath());
-            log.debug("jre.minVersion = " + c.getJre().getMinVersion());
-            log.debug("jre.maxVersion = " + c.getJre().getMaxVersion());
-            log.debug("jre.requiresJdk = " + c.getJre().getRequiresJdk());
-            log.debug("jre.requires64Bit = " + c.getJre().getRequires64Bit());
-            log.debug("jre.initialHeapSize = " + c.getJre().getInitialHeapSize());
-            log.debug("jre.initialHeapPercent = " + c.getJre().getInitialHeapPercent());
-            log.debug("jre.maxHeapSize = " + c.getJre().getMaxHeapSize());
-            log.debug("jre.maxHeapPercent = " + c.getJre().getMaxHeapPercent());
-            log.debug("jre.opts = " + c.getJre().getOptions());
-        } else {
-            log.debug("jre = null");
-        }
-        if (c.getClassPath() != null) {
-            log.debug("classPath.mainClass = " + c.getClassPath().getMainClass());
-        }
-        if (classPath != null) {
-            log.debug("classPath.addDependencies = " + classPath.addDependencies);
-            log.debug("classPath.jarLocation = " + classPath.jarLocation);
-            log.debug("classPath.preCp = " + classPath.preCp);
-            log.debug("classPath.postCp = " + classPath.postCp);
-        } else {
-            log.info("classpath = null");
-        }
-        if (c.getSplash() != null) {
-            log.debug("splash.file = " + c.getSplash().getFile());
-            log.debug("splash.waitForWindow = " + c.getSplash().getWaitForWindow());
-            log.debug("splash.timeout = " + c.getSplash().getTimeout());
-            log.debug("splash.timoutErr = " + c.getSplash().isTimeoutErr());
-        } else {
-            log.debug("splash = null");
-        }
-        if (c.getVersionInfo() != null) {
-            log.debug("versionInfo.fileVersion = " + c.getVersionInfo().getFileVersion());
-            log.debug("versionInfo.txtFileVersion = " + c.getVersionInfo().getTxtFileVersion());
-            log.debug("versionInfo.fileDescription = " + c.getVersionInfo().getFileDescription());
-            log.debug("versionInfo.copyright = " + c.getVersionInfo().getCopyright());
-            log.debug("versionInfo.productVersion = " + c.getVersionInfo().getProductVersion());
-            log.debug("versionInfo.txtProductVersion = " + c.getVersionInfo().getTxtProductVersion());
-            log.debug("versionInfo.productName = " + c.getVersionInfo().getProductName());
-            log.debug("versionInfo.companyName = " + c.getVersionInfo().getCompanyName());
-            log.debug("versionInfo.internalName = " + c.getVersionInfo().getInternalName());
-            log.debug("versionInfo.originalFilename = " + c.getVersionInfo().getOriginalFilename());
-            log.debug("versionInfo.language = " + c.getVersionInfo().getLanguage());
-            log.debug("versionInfo.languageIndex = " + c.getVersionInfo().getLanguageIndex());
-            log.debug("versionInfo.trademarks = " + c.getVersionInfo().getTrademarks());
-        } else {
-            log.debug("versionInfo = null");
-        }
-        if (c.getMessages() != null) {
-            log.debug("messages.startupErr = " + c.getMessages().getStartupErr());
-            log.debug("messages.jreNotFoundErr = " + c.getMessages().getJreNotFoundErr());
-            log.debug("messages.jreVersionErr = " + c.getMessages().getJreVersionErr());
-            log.debug("messages.launcherErr = " + c.getMessages().getLauncherErr());
-            log.debug("messages.instanceAlreadyExistsMsg = " + c.getMessages().getInstanceAlreadyExistsMsg());
-        } else {
-            log.debug("messages = null");
-        }
-    }
-
-    /**
      * A version of the Launch4j used by the plugin.
      * We want to download the platform-specific bundle whose version matches the Launch4j version,
      * so we have to figure out what version the plugin is using.
@@ -827,17 +862,6 @@ public class Launch4jMojo extends AbstractMojo {
         }
 
         return version;
-    }
-
-    /**
-     * Checks if execution of the plugin should be skipped
-     *
-     * @return true to skip execution
-     */
-    private boolean skipExecution() {
-        getLog().debug("skip = " + this.skip);
-        getLog().debug("skipLaunch4j = " + System.getProperty("skipLaunch4j"));
-        return skip || System.getProperty("skipLaunch4j") != null;
     }
 
     private File getJar() {
