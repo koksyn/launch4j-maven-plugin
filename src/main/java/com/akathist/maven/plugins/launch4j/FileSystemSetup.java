@@ -89,26 +89,34 @@ class FileSystemSetup {
 
             while (jarEntries.hasMoreElements()) {
                 JarEntry jarEntry = jarEntries.nextElement();
-
-                File unpackedEntry = new File(topLevelDirectory, jarEntry.getName());
-                if (!unpackedEntry.toPath().normalize().startsWith(topLevelDirectory.toPath().normalize())) {
-                    throw new RuntimeException("Bad zip entry");
-                }
-                File unpackedEntryParentDir = unpackedEntry.getParentFile();
-                if (unpackedEntryParentDir != null) { // why mkdir, when it is not null? and possible exists?
-                    unpackedEntryParentDir.mkdirs();
-                }
-
-                if (jarEntry.isDirectory()) {
-                    unpackedEntry.mkdirs();
-                } else {
-                    copyFileFromJar(jar, jarEntry, unpackedEntry);
-                    unpackedEntry.setLastModified(jarEntry.getTime());
-                }
+                tryUnpackJarEntry(jar, jarEntry, topLevelDirectory);
             }
         } catch (IOException e) {
-            throw new MojoExecutionException("Error unarchiving " + packedFile, e);
+            throw new IllegalStateException("Error unarchiving " + packedFile, e);
         }
+    }
+
+    private static void tryUnpackJarEntry(JarFile jar, JarEntry jarEntry, File topLevelDirectory) throws IOException {
+        File unpackedEntry = new File(topLevelDirectory, jarEntry.getName());
+        if (cannotNormalizePaths(topLevelDirectory, unpackedEntry)) {
+            throw new IllegalStateException("Bad zip entry");
+        }
+
+        File unpackedEntryParentDir = unpackedEntry.getParentFile();
+        if (unpackedEntryParentDir != null) { // why mkdir, when it is not null? and possible exists?
+            unpackedEntryParentDir.mkdirs();
+        }
+
+        if (jarEntry.isDirectory()) {
+            unpackedEntry.mkdirs();
+        } else {
+            copyFileFromJar(jar, jarEntry, unpackedEntry);
+            unpackedEntry.setLastModified(jarEntry.getTime());
+        }
+    }
+
+    private static boolean cannotNormalizePaths(File topLevelDirectory, File unpackedEntry) {
+        return !unpackedEntry.toPath().normalize().startsWith(topLevelDirectory.toPath().normalize());
     }
 
     private static void copyFileFromJar(JarFile jar, JarEntry jarEntry, File unpackedEntry) throws IOException {
