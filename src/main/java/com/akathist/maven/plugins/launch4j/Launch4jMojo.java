@@ -542,7 +542,7 @@ public class Launch4jMojo extends AbstractMojo {
 
     private void tryBuildExecutable(File baseDirectory) throws MojoExecutionException {
         try {
-            ExecutableBuilder executableBuilder = new ExecutableBuilder(getLog());
+            ExecutableBuilder executableBuilder = new ExecutableBuilder(getLog(), new ExecutableBuilderFactory());
             executableBuilder.build(baseDirectory);
         } catch (RuntimeException exception) {
             throw new MojoExecutionException("Failed to build the executable", exception);

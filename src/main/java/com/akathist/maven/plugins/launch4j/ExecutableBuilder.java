@@ -9,10 +9,12 @@ import java.io.File;
 class ExecutableBuilder {
     private final Log log;
     private final MavenLog mavenLog;
+    private final ExecutableBuilderFactory executableBuilderFactory;
 
-    ExecutableBuilder(Log log) {
+    ExecutableBuilder(Log log, ExecutableBuilderFactory executableBuilderFactory) {
         this.log = log;
         this.mavenLog = new MavenLog(log);
+        this.executableBuilderFactory = executableBuilderFactory;
     }
 
     void build(File baseDirectory) {
@@ -23,7 +25,7 @@ class ExecutableBuilder {
             throw new IllegalArgumentException("Base directory under path: '" + baseDirectory.getPath() + "' does not exist.");
         }
 
-        final Builder builder = new Builder(mavenLog, baseDirectory);
+        final Builder builder = executableBuilderFactory.build(mavenLog, baseDirectory);
 
         try {
             builder.build();
