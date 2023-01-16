@@ -44,75 +44,106 @@ class FileSystemSetup {
      * Writes a marker file to prevent unzipping more than once.
      */
     File unpackWorkDir(Artifact localArtifact) throws MojoExecutionException {
-        if (localArtifact == null || localArtifact.getFile() == null) {
-            throw new MojoExecutionException("Cannot obtain file path to " + localArtifact);
-        }
-        log.debug("Unpacking " + localArtifact + " into " + localArtifact.getFile());
-        File platJar = localArtifact.getFile();
-        File dest = platJar.getParentFile();
-        File marker = new File(dest, platJar.getName() + ".unpacked");
-        String n = platJar.getName();
-        File workdir = new File(dest, n.substring(0, n.length() - 4));
+        File packedArtifactFile = findArtifactFileInsideJar(localArtifact);
+        String packedArtifactFileName = packedArtifactFile.getName();
+        String packedArtifactFileNameWithoutZipExtension = packedArtifactFileName.substring(0, packedArtifactFileName.length() - 4);
+
+        File topLevelDirectory = packedArtifactFile.getParentFile();
+        File unpackedMarkerFile = new File(topLevelDirectory, packedArtifactFileNameWithoutZipExtension + ".unpacked");
+        File unpackedArtifactDir = new File(topLevelDirectory, packedArtifactFileNameWithoutZipExtension);
 
         // If the artifact is a SNAPSHOT, then a.getVersion() will report the long timestamp,
         // but getFile() will be 1.1-SNAPSHOT.
         // Since getFile() doesn't use the timestamp, all timestamps wind up in the same place.
-        // Therefore, we need to expand the jar every time, if the marker file is stale.
-        if (marker.exists() && marker.lastModified() > platJar.lastModified()) {
-            // if (marker.exists() && marker.platJar.getName().indexOf("SNAPSHOT") == -1) {
-            log.info("Platform-specific work directory already exists: " + workdir.getAbsolutePath());
+        // Therefore, we need to expand the jar every time, if the unpackedMarkerFile file is stale.
+        if (markerFileExistsAndIsYounger(packedArtifactFile, unpackedMarkerFile)) {
+            log.info("Platform-specific work directory already exists: " + unpackedArtifactDir.getAbsolutePath());
         } else {
-            // trying to use plexus-archiver here is a miserable waste of time:
-            try (JarFile jf = new JarFile(platJar)) {
-                Enumeration<JarEntry> en = jf.entries();
-                while (en.hasMoreElements()) {
-                    JarEntry je = en.nextElement();
-                    File outFile = new File(dest, je.getName());
-                    if (!outFile.toPath().normalize().startsWith(dest.toPath().normalize())) {
-                        throw new RuntimeException("Bad zip entry");
-                    }
-                    File parent = outFile.getParentFile();
-                    if (parent != null) parent.mkdirs();
-                    if (je.isDirectory()) {
-                        outFile.mkdirs();
-                    } else {
-                        try (InputStream in = jf.getInputStream(je)) {
-                            try (FileOutputStream fout = new FileOutputStream(outFile)) {
-                                byte[] buf = new byte[1024];
-                                int len;
-                                while ((len = in.read(buf)) >= 0) {
-                                    fout.write(buf, 0, len);
-                                }
-                            }
-                        }
-                        outFile.setLastModified(je.getTime());
-                    }
-                }
-            } catch (IOException e) {
-                throw new MojoExecutionException("Error unarchiving " + platJar, e);
-            }
-
-            try {
-                marker.createNewFile();
-                marker.setLastModified(new Date().getTime());
-            } catch (IOException e) {
-                log.warn("Trouble creating marker file " + marker, e);
-            }
+            tryUnpackFileIntoADirectory(packedArtifactFile, topLevelDirectory);
+            tryCreateMarkerFile(unpackedMarkerFile);
         }
 
-        setPermissions(workdir);
-        return workdir;
+        applyRequiredPermissionsOnDir(unpackedArtifactDir);
+
+        return unpackedArtifactDir;
+    }
+
+    private File findArtifactFileInsideJar(Artifact artifact) {
+        if (artifact == null || artifact.getFile() == null) {
+            throw new IllegalArgumentException("Cannot obtain file path to " + artifact);
+        }
+
+        File artifactFile = artifact.getFile();
+        log.debug("Unpacking " + artifact + " into " + artifactFile);
+        return artifactFile;
+    }
+
+    private static boolean markerFileExistsAndIsYounger(File packedArtifactFile, File unpackedMarkerFile) {
+        return unpackedMarkerFile.exists() && unpackedMarkerFile.lastModified() > packedArtifactFile.lastModified();
+    }
+
+    private static void tryUnpackFileIntoADirectory(File packedFile, File topLevelDirectory) throws MojoExecutionException {
+        // trying to use plexus-archiver here is a miserable waste of time:
+        try (JarFile jar = new JarFile(packedFile)) {
+            Enumeration<JarEntry> jarEntries = jar.entries();
+
+            while (jarEntries.hasMoreElements()) {
+                JarEntry jarEntry = jarEntries.nextElement();
+
+                File unpackedEntry = new File(topLevelDirectory, jarEntry.getName());
+                if (!unpackedEntry.toPath().normalize().startsWith(topLevelDirectory.toPath().normalize())) {
+                    throw new RuntimeException("Bad zip entry");
+                }
+                File unpackedEntryParentDir = unpackedEntry.getParentFile();
+                if (unpackedEntryParentDir != null) { // why mkdir, when it is not null? and possible exists?
+                    unpackedEntryParentDir.mkdirs();
+                }
+
+                if (jarEntry.isDirectory()) {
+                    unpackedEntry.mkdirs();
+                } else {
+                    copyFileFromJar(jar, jarEntry, unpackedEntry);
+                    unpackedEntry.setLastModified(jarEntry.getTime());
+                }
+            }
+        } catch (IOException e) {
+            throw new MojoExecutionException("Error unarchiving " + packedFile, e);
+        }
+    }
+
+    private static void copyFileFromJar(JarFile jar, JarEntry jarEntry, File unpackedEntry) throws IOException {
+        try (InputStream jarEntryInputStream = jar.getInputStream(jarEntry);
+             FileOutputStream unpackedFileOutputStream = new FileOutputStream(unpackedEntry)) {
+            rewriteBytes(jarEntryInputStream, unpackedFileOutputStream);
+        }
+    }
+
+    private static void rewriteBytes(InputStream inputStream, FileOutputStream fileOutputStream) throws IOException {
+        byte[] buf = new byte[1024];
+        int len;
+        while ((len = inputStream.read(buf)) >= 0) {
+            fileOutputStream.write(buf, 0, len);
+        }
+    }
+
+    private void tryCreateMarkerFile(File unpackedMarkerFile) {
+        try {
+            unpackedMarkerFile.createNewFile();
+            unpackedMarkerFile.setLastModified(new Date().getTime());
+        } catch (IOException e) {
+            log.warn("Trouble creating unpackedMarkerFile file " + unpackedMarkerFile, e);
+        }
     }
 
     /**
      * TODO: refactoring + tests
      * Chmods the helper executables ld and windres on systems where that is necessary.
      */
-    private void setPermissions(File workdir) {
+    private void applyRequiredPermissionsOnDir(File unpackedArtifactDir) {
         if (!System.getProperty("os.name").startsWith("Windows")) {
             try {
-                new ProcessBuilder("chmod", "755", workdir + "/bin/ld").start().waitFor();
-                new ProcessBuilder("chmod", "755", workdir + "/bin/windres").start().waitFor();
+                new ProcessBuilder("chmod", "755", unpackedArtifactDir + "/bin/ld").start().waitFor();
+                new ProcessBuilder("chmod", "755", unpackedArtifactDir + "/bin/windres").start().waitFor();
             } catch (InterruptedException e) {
                 log.warn("Interrupted while chmodding platform-specific binaries", e);
             } catch (IOException e) {
