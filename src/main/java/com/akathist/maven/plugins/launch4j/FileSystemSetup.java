@@ -39,6 +39,7 @@ class FileSystemSetup {
     }
 
     /**
+     * TODO: refactoring + tests
      * Unzips the given artifact in-place and returns the newly-unzipped top-level directory.
      * Writes a marker file to prevent unzipping more than once.
      */
@@ -104,6 +105,7 @@ class FileSystemSetup {
     }
 
     /**
+     * TODO: refactoring + tests
      * Chmods the helper executables ld and windres on systems where that is necessary.
      */
     private void setPermissions(File workdir) {
