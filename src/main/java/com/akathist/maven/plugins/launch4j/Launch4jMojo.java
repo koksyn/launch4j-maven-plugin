@@ -400,8 +400,8 @@ public class Launch4jMojo extends AbstractMojo {
      * @return the work directory.
      */
     private File setupBuildEnvironmentAndGetWorkDir() throws MojoExecutionException {
-        FileSystemSetup fileSystemSetup = new FileSystemSetup(getLog());
-        fileSystemSetup.createParentFolderQuietly(outfile);
+        FileSystemUtil fileSystemUtil = new FileSystemUtil(getLog());
+        fileSystemUtil.createParentFolderQuietly(outfile);
 
         Launch4jArtifactCreator launch4jArtifactCreator = new Launch4jArtifactCreator(
                 getLog(),
@@ -420,7 +420,10 @@ public class Launch4jMojo extends AbstractMojo {
         launch4jArtifactCreator.retrieveBinaryBits(configuration, launch4jArtifactTemplate);
 
         Artifact launch4jArtifact = localRepository.find(launch4jArtifactTemplate);
-        return fileSystemSetup.unpackWorkDir(launch4jArtifact);
+
+        JarFileExtractor jarFileExtractor = new JarFileExtractor(fileSystemUtil);
+        ArtifactExtractor artifactExtractor = new ArtifactExtractor(jarFileExtractor, fileSystemUtil, getLog());
+        return artifactExtractor.unpackAndGetUnpackedDir(launch4jArtifact);
     }
 
     private boolean tryCheckInfileExists() throws MojoExecutionException {

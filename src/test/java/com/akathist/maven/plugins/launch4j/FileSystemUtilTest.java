@@ -14,7 +14,7 @@ import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 
 @RunWith(MockitoJUnitRunner.class)
-public class FileSystemSetupTest {
+public class FileSystemUtilTest {
     @Mock
     private File subject;
     @Mock
@@ -24,12 +24,12 @@ public class FileSystemSetupTest {
     private Log log;
 
     @InjectMocks
-    private FileSystemSetup fileSystemSetup;
+    private FileSystemUtil fileSystemUtil;
 
     @Test
     public void should_Not_CreateParentFolderWhen_SubjectIsNull() {
         // when
-        fileSystemSetup.createParentFolderQuietly(null);
+        fileSystemUtil.createParentFolderQuietly(null);
 
         // then
         verify(parentFolder, never()).mkdirs();
@@ -42,7 +42,7 @@ public class FileSystemSetupTest {
         doReturn(true).when(parentFolder).exists();
 
         // when
-        fileSystemSetup.createParentFolderQuietly(subject);
+        fileSystemUtil.createParentFolderQuietly(subject);
 
         // then
         verify(parentFolder, never()).mkdirs();
@@ -58,7 +58,7 @@ public class FileSystemSetupTest {
         doReturn(false).when(parentFolder).mkdirs();
 
         // when
-        fileSystemSetup.createParentFolderQuietly(subject);
+        fileSystemUtil.createParentFolderQuietly(subject);
 
         // then
         verify(parentFolder).mkdirs();
@@ -77,7 +77,7 @@ public class FileSystemSetupTest {
         doReturn(true).when(parentFolder).mkdirs();
 
         // when
-        fileSystemSetup.createParentFolderQuietly(subject);
+        fileSystemUtil.createParentFolderQuietly(subject);
 
         // then
         verify(parentFolder).mkdirs();
