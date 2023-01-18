@@ -9,6 +9,7 @@ import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
 
 import java.io.File;
+import java.io.IOException;
 
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
@@ -81,6 +82,39 @@ public class FileSystemUtilTest {
 
         // then
         verify(parentFolder).mkdirs();
+        verify(log, never()).warn(anyString());
+    }
+
+    @Test
+    public void should_Not_CreateFileWhen_ItIsNull() {
+        // when
+        fileSystemUtil.createFileQuietly(null);
+
+        // then
+        verify(log, never()).warn(anyString());
+    }
+
+    @Test
+    public void shouldLogWarn_WhenIOExceptionOccurred() throws IOException {
+        // given
+        IOException ioException = new IOException();
+        doThrow(ioException).when(subject).createNewFile();
+
+        // when
+        fileSystemUtil.createFileQuietly(subject);
+
+        // then
+        verify(log).warn(anyString(), eq(ioException));
+    }
+
+    @Test
+    public void shouldCreateFileWhen_ItDoesNotExist() throws IOException {
+        // when
+        fileSystemUtil.createFileQuietly(subject);
+
+        // then
+        verify(subject).createNewFile();
+        verify(subject).setLastModified(anyLong());
         verify(log, never()).warn(anyString());
     }
 }
