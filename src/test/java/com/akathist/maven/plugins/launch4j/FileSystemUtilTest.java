@@ -1,13 +1,16 @@
 package com.akathist.maven.plugins.launch4j;
 
+import junitparams.JUnitParamsRunner;
+import junitparams.Parameters;
 import org.apache.commons.io.FileUtils;
 import org.apache.maven.plugin.logging.Log;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.junit.MockitoJUnitRunner;
+import org.mockito.MockitoAnnotations;
 
 import java.io.File;
 import java.io.IOException;
@@ -15,7 +18,7 @@ import java.io.IOException;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 
-@RunWith(MockitoJUnitRunner.class)
+@RunWith(JUnitParamsRunner.class)
 public class FileSystemUtilTest {
     @Mock
     private File subject;
@@ -27,6 +30,12 @@ public class FileSystemUtilTest {
 
     @InjectMocks
     private FileSystemUtil fileSystemUtil;
+
+    @Before
+    public void setUp() {
+        MockitoAnnotations.initMocks(this);
+    }
+
 
     @Test
     public void should_Not_CreateParentFolderWhen_SubjectIsNull() {
@@ -141,5 +150,89 @@ public class FileSystemUtilTest {
         // then
         assertFalse(tempFile.exists());
         verify(log, never()).warn(anyString());
+    }
+
+    @Test
+    public void shouldReturnFalse_WhenFileDoesNotExist() {
+        // when
+        boolean result = fileSystemUtil.fileExistsAndIsYoungerThan(subject, 0L);
+
+        // then
+        assertFalse(result);
+    }
+
+    @Test
+    public void shouldReturnFalse_WhenFileDoesExist_AndIsNotYoungerThanTimestamp() {
+        // given
+        long lastModified = 1L;
+        long timestamp = 1337L;
+
+        doReturn(true).when(subject).exists();
+        doReturn(lastModified).when(subject).lastModified();
+
+        // when
+        boolean result = fileSystemUtil.fileExistsAndIsYoungerThan(subject, timestamp);
+
+        // then
+        assertFalse(result);
+    }
+
+    @Test
+    public void shouldReturnTrue_WhenFileDoesExist_AndIsYoungerThanTimestamp() {
+        // given
+        long lastModified = 123L;
+        long timestamp = 111L;
+
+        doReturn(true).when(subject).exists();
+        doReturn(lastModified).when(subject).lastModified();
+
+        // when
+        boolean result = fileSystemUtil.fileExistsAndIsYoungerThan(subject, timestamp);
+
+        // then
+        assertTrue(result);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void shouldThrowException_WhenTryingToRetrieveFileName_FromNullFile() {
+        // expect throws
+        fileSystemUtil.retrieveFileNameWithoutArchiveExtension(null);
+    }
+
+    @Test
+    @Parameters({
+        "app.exe",
+        "something/to/say.txt",
+        "nothing.to.say"
+    })
+    public void shouldRetrieve_FullFileName_WhenFileIsNotNull_AndDoesNotContainArchiveExtension(String fullFileName) {
+        // given
+        doReturn(fullFileName).when(subject).getName();
+
+        // when
+        String fileName = fileSystemUtil.retrieveFileNameWithoutArchiveExtension(subject);
+
+        // then
+        assertEquals(fullFileName, fileName);
+    }
+
+    @Test
+    @Parameters({
+            "sth.zip, sth",
+            "super/java/app.jar, super/java/app",
+            "artifact.jar, artifact"
+    })
+    public void shouldRetrieve_LimitedFileName_WhenFileIsNotNull_AndContainsArchiveExtension(
+        String fullFileName,
+        String limitedFileName
+    ) {
+        // given
+        doReturn(fullFileName).when(subject).getName();
+
+        // when
+        String fileName = fileSystemUtil.retrieveFileNameWithoutArchiveExtension(subject);
+
+        // then
+        assertEquals(limitedFileName, fileName);
     }
 }

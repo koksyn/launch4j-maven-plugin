@@ -52,4 +52,23 @@ class FileSystemUtil {
             }
         }
     }
+
+    boolean fileExistsAndIsYoungerThan(File file, long timestamp) {
+        return file.exists() && file.lastModified() > timestamp;
+    }
+
+    String retrieveFileNameWithoutArchiveExtension(File file) {
+        if(file == null) {
+            throw new IllegalArgumentException("Cannot retrieve fileName without JAR/ZIP ext, because file is null.");
+        }
+
+        String fileName = file.getName();
+
+        String fileNameLowercase = fileName.toLowerCase();
+        if (fileNameLowercase.endsWith(".jar") || fileNameLowercase.endsWith(".zip")) {
+            return fileName.substring(0, fileName.length() - 4);
+        }
+
+        return fileName;
+    }
 }
