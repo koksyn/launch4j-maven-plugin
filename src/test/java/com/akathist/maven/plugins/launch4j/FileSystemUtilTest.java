@@ -1,5 +1,6 @@
 package com.akathist.maven.plugins.launch4j;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.maven.plugin.logging.Log;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -115,6 +116,30 @@ public class FileSystemUtilTest {
         // then
         verify(subject).createNewFile();
         verify(subject).setLastModified(anyLong());
+        verify(log, never()).warn(anyString());
+    }
+
+    @Test
+    public void should_Not_DeleteFileWhen_ItIsNull() {
+        // when
+        fileSystemUtil.deleteFileQuietly(null);
+
+        // then
+        verify(log, never()).warn(anyString());
+    }
+
+    @Test
+    public void shouldDeleteFile() throws IOException {
+        // given
+        File tempFile = new File("temp");
+        FileUtils.touch(tempFile);
+        doReturn(tempFile.toPath()).when(subject).toPath();
+
+        // when
+        fileSystemUtil.deleteFileQuietly(subject);
+
+        // then
+        assertFalse(tempFile.exists());
         verify(log, never()).warn(anyString());
     }
 }
