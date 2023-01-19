@@ -24,7 +24,7 @@ class ArtifactExtractor {
     File unpackAndGetUnpackedDir(Artifact artifact) {
         File packedArtifactFile = findArtifactFile(artifact);
         log.debug("Unpacking " + artifact + " from " + packedArtifactFile);
-        String packedArtifactFileNameWithoutExtension = retrieveFileNameWithoutJarExtension(packedArtifactFile);
+        String packedArtifactFileNameWithoutExtension = fileSystemUtil.retrieveFileNameWithoutArchiveExtension(packedArtifactFile);
 
         File topLevelDirectory = packedArtifactFile.getParentFile();
         File marker = new File(topLevelDirectory, packedArtifactFileNameWithoutExtension + ".unpacked");
@@ -33,7 +33,7 @@ class ArtifactExtractor {
         // If the artifact is a SNAPSHOT, then artifact.getVersion() will report the long timestamp, but getFile() will be 1.1-SNAPSHOT.
         // Since getFile() doesn't use the timestamp, all timestamps wind up in the same place.
         // Therefore, we need to expand the jar every time, if the marker file is stale.
-        if (fileExistsAndIsYoungerThan(marker, packedArtifactFile.lastModified())) {
+        if (fileSystemUtil.fileExistsAndIsYoungerThan(marker, packedArtifactFile.lastModified())) {
             log.info("Platform-specific work directory already exists: " + unpackedDirectory.getAbsolutePath());
         } else {
             fileSystemUtil.deleteFileQuietly(marker);
@@ -54,15 +54,6 @@ class ArtifactExtractor {
         }
 
         return artifact.getFile();
-    }
-
-    private String retrieveFileNameWithoutJarExtension(File file) {
-        String fileName = file.getName();
-        return fileName.substring(0, fileName.length() - 4);
-    }
-
-    private static boolean fileExistsAndIsYoungerThan(File file, long thresholdTimestamp) {
-        return file.exists() && file.lastModified() > thresholdTimestamp;
     }
 
     /**
