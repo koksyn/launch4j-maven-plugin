@@ -399,17 +399,19 @@ public class Launch4jMojo extends AbstractMojo {
      *
      * @return the work directory.
      */
-    private File setupBuildEnvironmentAndGetWorkDir() throws MojoExecutionException {
+    private File setupBuildEnvironmentAndGetWorkDir() throws MojoExecutionException { // todo catch all exceptions and throw MojoExecutionException
         FileSystemUtil fileSystemUtil = new FileSystemUtil(getLog());
         fileSystemUtil.createParentFolderQuietly(outfile);
 
-        Launch4jArtifactCreator launch4jArtifactCreator = new Launch4jArtifactCreator(
+        PlatformDetector platformDetector = new PlatformDetector(getLog());
+        ArtifactVersionDetector artifactVersionDetector = new ArtifactVersionDetector(pluginArtifacts, getLog());
+        Launch4jArtifactResolver launch4JArtifactResolver = new Launch4jArtifactResolver(
                 getLog(),
                 resolver,
                 factory,
-                pluginArtifacts
+                artifactVersionDetector,
+                platformDetector
         );
-        Artifact launch4jArtifactTemplate = launch4jArtifactCreator.chooseBinaryBits();
 
         // todo: a separate method
         ProjectBuildingRequest configuration = session.getProjectBuildingRequest();
@@ -417,9 +419,8 @@ public class Launch4jMojo extends AbstractMojo {
         configuration.setLocalRepository(localRepository);
         configuration.setProject(session.getCurrentProject());
         // ---
-        launch4jArtifactCreator.retrieveBinaryBits(configuration, launch4jArtifactTemplate);
-
-        Artifact launch4jArtifact = localRepository.find(launch4jArtifactTemplate);
+        Artifact launch4jArtifactDefinition = launch4JArtifactResolver.resolveArtifact(configuration);
+        Artifact launch4jArtifact = localRepository.find(launch4jArtifactDefinition);
 
         JarFileExtractor jarFileExtractor = new JarFileExtractor(fileSystemUtil);
         ArtifactExtractor artifactExtractor = new ArtifactExtractor(jarFileExtractor, fileSystemUtil, getLog());
