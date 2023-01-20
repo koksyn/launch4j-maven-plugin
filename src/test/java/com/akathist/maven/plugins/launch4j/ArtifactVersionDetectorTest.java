@@ -16,16 +16,15 @@ public class ArtifactVersionDetectorTest {
     private static final String ARTIFACT_ID = "any";
     private static final String GROUP_ID = "any";
 
-    private Log log;
     private Artifact pluginArtifact;
     private ArtifactVersionDetector detector;
 
     @Before
     public void initialize() {
         pluginArtifact = mock(Artifact.class);
-        List<Artifact> pluginArtifacts = singletonList(pluginArtifact);
-        log = mock(Log.class);
 
+        List<Artifact> pluginArtifacts = singletonList(pluginArtifact);
+        Log log = mock(Log.class);
         detector = new ArtifactVersionDetector(pluginArtifacts, log);
     }
 
