@@ -404,31 +404,35 @@ public class Launch4jMojo extends AbstractMojo {
             FileSystemUtil fileSystemUtil = new FileSystemUtil(getLog());
             fileSystemUtil.createParentFolderQuietly(outfile);
 
-            PlatformDetector platformDetector = new PlatformDetector(getLog());
-            ArtifactVersionDetector artifactVersionDetector = new ArtifactVersionDetector(pluginArtifacts, getLog());
             Launch4jArtifactResolver launch4JArtifactResolver = new Launch4jArtifactResolver(
                     getLog(),
                     resolver,
                     factory,
-                    artifactVersionDetector,
-                    platformDetector
+                    new ArtifactVersionDetector(pluginArtifacts, getLog()),
+                    new PlatformDetector(getLog())
             );
 
-            // todo: a separate method
-            ProjectBuildingRequest configuration = session.getProjectBuildingRequest();
-            configuration.setRemoteRepositories(project.getRemoteArtifactRepositories());
-            configuration.setLocalRepository(localRepository);
-            configuration.setProject(session.getCurrentProject());
-            // ---
-            Artifact launch4jArtifactDefinition = launch4JArtifactResolver.resolveArtifact(configuration);
+            ProjectBuildingRequest buildingConfiguration = generateL4jArtifactBuildingConfiguration();
+            Artifact launch4jArtifactDefinition = launch4JArtifactResolver.resolveArtifact(buildingConfiguration);
             Artifact launch4jArtifact = localRepository.find(launch4jArtifactDefinition);
 
-            JarFileExtractor jarFileExtractor = new JarFileExtractor(fileSystemUtil);
-            ArtifactExtractor artifactExtractor = new ArtifactExtractor(jarFileExtractor, fileSystemUtil, getLog());
+            ArtifactExtractor artifactExtractor = new ArtifactExtractor(
+                    new JarFileExtractor(fileSystemUtil),
+                    fileSystemUtil,
+                    getLog()
+            );
             return artifactExtractor.unpackAndGetUnpackedDir(launch4jArtifact);
         } catch (RuntimeException exception) {
             throw new MojoExecutionException(exception);
         }
+    }
+
+    private ProjectBuildingRequest generateL4jArtifactBuildingConfiguration() {
+        ProjectBuildingRequest configuration = session.getProjectBuildingRequest();
+        configuration.setRemoteRepositories(project.getRemoteArtifactRepositories());
+        configuration.setLocalRepository(localRepository);
+        configuration.setProject(session.getCurrentProject());
+        return configuration;
     }
 
     private boolean tryCheckInfileExists() throws MojoExecutionException {

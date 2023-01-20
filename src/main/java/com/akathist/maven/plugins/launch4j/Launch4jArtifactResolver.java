@@ -26,16 +26,16 @@ class Launch4jArtifactResolver {
         this.platformDetector = platformDetector;
     }
 
-    Artifact resolveArtifact(ProjectBuildingRequest configuration) {
-        if(configuration == null) {
-            throw new IllegalArgumentException("configuration is null.");
+    Artifact resolveArtifact(ProjectBuildingRequest buildingConfiguration) {
+        if(buildingConfiguration == null) {
+            throw new IllegalArgumentException("buildingConfiguration is null.");
         }
 
         String osPlatform = platformDetector.detectOSFromSystemProperties();
         String launch4jVersion = tryDetectLaunch4jVersion();
 
         Artifact launch4jArtifactDefinition = getPlatformSpecificArtifactDefinition(osPlatform, launch4jVersion);
-        resolveArtifact(configuration, launch4jArtifactDefinition);
+        resolveArtifact(buildingConfiguration, launch4jArtifactDefinition);
 
         return launch4jArtifactDefinition;
     }
@@ -72,11 +72,11 @@ class Launch4jArtifactResolver {
     /**
      * Downloads the platform-specific parts, if necessary.
      */
-    private void resolveArtifact(ProjectBuildingRequest configuration, Artifact artifact) {
+    private void resolveArtifact(ProjectBuildingRequest buildingConfiguration, Artifact artifact) {
         log.debug("Retrieving artifact: " + artifact + " stored in " + artifact.getFile());
 
         try {
-            artifactResolver.resolveArtifact(configuration, artifact).getArtifact();
+            artifactResolver.resolveArtifact(buildingConfiguration, artifact).getArtifact();
         } catch (IllegalArgumentException e) {
             throw new IllegalStateException("Illegal Argument Exception", e);
         } catch (ArtifactResolverException e) {
