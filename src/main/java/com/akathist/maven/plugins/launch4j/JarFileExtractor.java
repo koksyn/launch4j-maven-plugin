@@ -19,6 +19,13 @@ class JarFileExtractor {
      * trying to use plexus-archiver here is a miserable waste of time
      */
     void tryUnpackIntoDir(File fileInsideJar, File destinationDir) {
+        if(fileInsideJar == null) {
+            throw new IllegalArgumentException("fileInsideJar is null.");
+        }
+        if(destinationDir == null) {
+            throw new IllegalArgumentException("destinationDir is null.");
+        }
+
         try (JarFile jar = new JarFile(fileInsideJar)) {
             Enumeration<JarEntry> jarEntries = jar.entries();
 
