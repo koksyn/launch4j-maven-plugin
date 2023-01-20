@@ -10,7 +10,7 @@ import java.util.Date;
 class FileSystemUtil {
     private final Log log;
 
-    public FileSystemUtil(Log log) {
+    FileSystemUtil(Log log) {
         this.log = log;
     }
 

@@ -20,7 +20,7 @@ class Launch4jArtifactCreator {
     private final RepositorySystem repositorySystemFactory;
     private final List<Artifact> pluginArtifacts;
 
-    public Launch4jArtifactCreator(Log log,
+    Launch4jArtifactCreator(Log log,
                                    ArtifactResolver artifactResolver,
                                    RepositorySystem repositorySystem,
                                    List<Artifact> pluginArtifacts) {

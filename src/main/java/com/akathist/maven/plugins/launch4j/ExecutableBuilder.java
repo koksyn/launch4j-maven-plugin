@@ -31,7 +31,7 @@ class ExecutableBuilder {
             builder.build();
         } catch (BuilderException exception) {
             log.error(exception);
-            throw new IllegalStateException("Please verify your configuration.", exception);
+            throw new IllegalStateException("Cannot build executable. Please verify your configuration.", exception);
         }
     }
 }

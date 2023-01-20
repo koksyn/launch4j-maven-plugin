@@ -4,7 +4,7 @@ import net.sf.launch4j.Builder;
 
 import java.io.File;
 
-public class ExecutableBuilderFactory {
+class ExecutableBuilderFactory {
     Builder build(MavenLog mavenLog, File buildDirectory) {
         return new Builder(mavenLog, buildDirectory);
     }
