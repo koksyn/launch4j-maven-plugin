@@ -4,7 +4,6 @@ import org.apache.maven.artifact.Artifact;
 import org.apache.maven.plugin.logging.Log;
 
 import java.io.File;
-import java.io.IOException;
 
 class ArtifactExtractor {
     private final JarFileExtractor jarFileExtractor;
@@ -41,9 +40,7 @@ class ArtifactExtractor {
             fileSystemUtil.createFileQuietly(marker);
         }
 
-        if (!System.getProperty("os.name").startsWith("Windows")) {
-            setPermissionsForNonWindowsBinaries(unpackedDirectory);
-        }
+        setPermissionsForNonWindowsBinaries(unpackedDirectory);
 
         return unpackedDirectory;
     }
@@ -60,13 +57,7 @@ class ArtifactExtractor {
      * Chmods the helper executables ld and windres on systems where that is necessary.
      */
     private void setPermissionsForNonWindowsBinaries(File sourceDir) {
-        try {
-            new ProcessBuilder("chmod", "755", sourceDir + "/bin/ld").start().waitFor();
-            new ProcessBuilder("chmod", "755", sourceDir + "/bin/windres").start().waitFor();
-        } catch (InterruptedException e) {
-            log.warn("Interrupted while chmodding platform-specific binaries", e);
-        } catch (IOException e) {
-            log.warn("Unable to set platform-specific binaries to 755", e);
-        }
+        fileSystemUtil.setNonWindowsFilePermissionsQuietly(sourceDir + "/bin/ld", "755");
+        fileSystemUtil.setNonWindowsFilePermissionsQuietly(sourceDir + "/bin/windres", "755");
     }
 }

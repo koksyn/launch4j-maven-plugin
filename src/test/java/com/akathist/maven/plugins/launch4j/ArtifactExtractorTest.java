@@ -1,17 +1,18 @@
 package com.akathist.maven.plugins.launch4j;
 
-import org.apache.commons.io.FileUtils;
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.plugin.logging.Log;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
 
 import java.io.File;
+import java.util.List;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 
 @RunWith(MockitoJUnitRunner.class)
@@ -67,6 +68,9 @@ public class ArtifactExtractorTest {
         verify(jarFileExtractor, never()).tryUnpackIntoDir(packedArtifactFile, topLevelDirectory);
         File expectedUnpackedDir = new File(topLevelDirectory, packedArtifactFileNameWithoutExtension);
         assertEquals(expectedUnpackedDir, unpackedDir);
+
+        // permissions for non-Windows binaries was set
+        verify(fileSystemUtil, times(2)).setNonWindowsFilePermissionsQuietly(anyString(), eq("755"));
     }
 
     @Test
@@ -97,5 +101,16 @@ public class ArtifactExtractorTest {
 
         File expectedUnpackedDir = new File(topLevelDirectory, packedArtifactFileNameWithoutExtension);
         assertEquals(expectedUnpackedDir, unpackedDir);
+
+        // permissions for non-Windows binaries was set
+        ArgumentCaptor<String> nonWindowsBinariesCaptor = ArgumentCaptor.forClass(String.class);
+        verify(fileSystemUtil, times(2))
+                .setNonWindowsFilePermissionsQuietly(nonWindowsBinariesCaptor.capture(), eq("755"));
+        List<String> nonWindowsBinariesPaths = nonWindowsBinariesCaptor.getAllValues();
+
+        assertNotNull(nonWindowsBinariesPaths);
+        assertEquals(2, nonWindowsBinariesPaths.size());
+        assertTrue(nonWindowsBinariesPaths.stream().anyMatch(path -> path.endsWith("/bin/ld")));
+        assertTrue(nonWindowsBinariesPaths.stream().anyMatch(path -> path.endsWith("/bin/windres")));
     }
 }

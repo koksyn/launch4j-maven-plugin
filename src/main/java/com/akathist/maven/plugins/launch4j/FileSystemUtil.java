@@ -71,4 +71,16 @@ class FileSystemUtil {
 
         return fileName;
     }
+
+    void setNonWindowsFilePermissionsQuietly(String filePath, String permissions) {
+        if (!System.getProperty("os.name").startsWith("Windows")) {
+            try {
+                new ProcessBuilder("chmod", permissions, filePath).start().waitFor();
+            } catch (InterruptedException e) {
+                log.warn("Interrupted while chmodding file " + filePath, e);
+            } catch (IOException e) {
+                log.warn("Unable to set file " + filePath + " permissions to " + permissions, e);
+            }
+        }
+    }
 }
