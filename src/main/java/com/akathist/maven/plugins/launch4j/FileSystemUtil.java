@@ -57,6 +57,10 @@ class FileSystemUtil {
         return file.exists() && file.lastModified() > timestamp;
     }
 
+    boolean fileLocatedOutsideDir(File file, File dir) {
+        return !file.toPath().normalize().startsWith(dir.toPath().normalize());
+    }
+
     String retrieveFileNameWithoutArchiveExtension(File file) {
         if(file == null) {
             throw new IllegalArgumentException("Cannot retrieve fileName without JAR/ZIP ext, because file is null.");

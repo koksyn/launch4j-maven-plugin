@@ -193,6 +193,54 @@ public class FileSystemUtilTest {
         assertTrue(result);
     }
 
+    @Test(expected = NullPointerException.class)
+    public void shouldThrowException_WhenFileIsNull() {
+        // expect throws
+        fileSystemUtil.fileLocatedOutsideDir(null, parentFolder);
+    }
+
+    @Test(expected = NullPointerException.class)
+    public void shouldThrowException_WhenDirIsNull() {
+        // expect throws
+        fileSystemUtil.fileLocatedOutsideDir(subject, null);
+    }
+
+    @Test
+    @Parameters({
+        "/tmp/file,/tmp",
+        "/file,/",
+        "abcd/efgh,abcd",
+    })
+    public void shouldReturnFalse_WhenFileLocatedInsideDir(String filePath, String dirPath) {
+        // given
+        File file = new File(filePath);
+        File dir = new File(dirPath);
+
+        // when
+        boolean result = fileSystemUtil.fileLocatedOutsideDir(file, dir);
+
+        // then
+        assertFalse(result);
+    }
+
+    @Test
+    @Parameters({
+            "/tmp/file,/opt",
+            "/file,/dir",
+            "hello.world,root",
+    })
+    public void shouldReturnTrue_WhenFileLocatedOutsideDir(String filePath, String dirPath) {
+        // given
+        File file = new File(filePath);
+        File dir = new File(dirPath);
+
+        // when
+        boolean result = fileSystemUtil.fileLocatedOutsideDir(file, dir);
+
+        // then
+        assertTrue(result);
+    }
+
     @Test(expected = IllegalArgumentException.class)
     public void shouldThrowException_WhenTryingToRetrieveFileName_FromNullFile() {
         // expect throws

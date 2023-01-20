@@ -33,7 +33,7 @@ class JarFileExtractor {
 
     private void tryUnpackJarEntryIntoDir(JarFile jar, JarEntry jarEntry, File destinationDir) throws IOException {
         File unpackedEntry = new File(destinationDir, jarEntry.getName());
-        if (fileLocatedOutsideDir(unpackedEntry, destinationDir)) {
+        if (fileSystemUtil.fileLocatedOutsideDir(unpackedEntry, destinationDir)) {
             throw new IllegalStateException("Bad jar entry: '" + unpackedEntry.getAbsolutePath() + "'. " +
                     "Located outside destination directory: " + destinationDir.getAbsolutePath());
         }
@@ -46,10 +46,6 @@ class JarFileExtractor {
             extractFileFromJar(jar, jarEntry, unpackedEntry);
             unpackedEntry.setLastModified(jarEntry.getTime());
         }
-    }
-
-    private boolean fileLocatedOutsideDir(File file, File dir) {
-        return !file.toPath().normalize().startsWith(dir.toPath().normalize());
     }
 
     private void extractFileFromJar(JarFile jar, JarEntry jarEntry, File destinationFile) throws IOException {
